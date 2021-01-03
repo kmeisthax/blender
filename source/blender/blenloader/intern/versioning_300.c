@@ -31,6 +31,8 @@
 #include "DNA_genfile.h"
 #include "DNA_listBase.h"
 #include "DNA_modifier_types.h"
+#include "DNA_screen_types.h"
+#include "DNA_space_types.h"
 #include "DNA_text_types.h"
 
 #include "BKE_animsys.h"
@@ -389,6 +391,20 @@ void blo_do_versions_300(FileData *fd, Library *UNUSED(lib), Main *bmain)
       }
 
       BKE_animdata_main_cb(bmain, do_version_bbone_len_scale_animdata_cb, NULL);
+    }
+
+    /* Initialize the bone wireframe opacity setting. */
+    if (!DNA_struct_elem_find(fd->filesdna, "View3DOverlay", "float", "bone_wire_alpha")) {
+      for (bScreen *screen = bmain->screens.first; screen; screen = screen->id.next) {
+        LISTBASE_FOREACH (ScrArea *, area, &screen->areabase) {
+          LISTBASE_FOREACH (SpaceLink *, sl, &area->spacedata) {
+            if (sl->spacetype == SPACE_VIEW3D) {
+              View3D *v3d = (View3D *)sl;
+              v3d->overlay.bone_wire_alpha = 1.0f;
+            }
+          }
+        }
+      }
     }
   }
 
