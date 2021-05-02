@@ -673,6 +673,9 @@ void ANIM_draw_previewrange(const struct bContext *C, struct View2D *v2d, int en
 /* main call to draw normal frame range indicators */
 void ANIM_draw_framerange(struct Scene *scene, struct View2D *v2d);
 
+/* call to draw custom action frame range indicators */
+void ANIM_draw_custom_framerange(struct View2D *v2d, float sfra, float efra);
+
 /* ************************************************* */
 /* F-MODIFIER TOOLS */
 
@@ -857,7 +860,7 @@ void ED_operatormacros_action(void);
 /* XXX: Should we be doing these here, or at all? */
 
 /* Action Editor - Action Management */
-struct AnimData *ED_actedit_animdata_from_context(struct bContext *C);
+struct AnimData *ED_actedit_animdata_from_context(const struct bContext *C);
 void ED_animedit_unlink_action(struct bContext *C,
                                struct ID *id,
                                struct AnimData *adt,

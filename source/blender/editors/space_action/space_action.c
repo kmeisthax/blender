@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "DNA_action_types.h"
+#include "DNA_anim_types.h"
 #include "DNA_collection_types.h"
 #include "DNA_object_types.h"
 #include "DNA_scene_types.h"
@@ -35,6 +36,7 @@
 #include "BLI_utildefines.h"
 
 #include "BKE_context.h"
+#include "BKE_nla.h"
 #include "BKE_screen.h"
 
 #include "RNA_access.h"
@@ -202,6 +204,20 @@ static void action_main_region_draw(const bContext *C, ARegion *region)
 
   /* start and end frame */
   ANIM_draw_framerange(scene, v2d);
+
+  if (ELEM(saction->mode, SACTCONT_ACTION, SACTCONT_SHAPEKEY)) {
+    /* Draw the action custom frame range highlight in the Action editor. */
+    if (saction->action && (saction->action->flag & ACT_FRAME_RANGE)) {
+      AnimData *adt = ED_actedit_animdata_from_context(C);
+
+      float frame_start = BKE_nla_tweakedit_remap(
+          adt, saction->action->frame_start, NLATIME_CONVERT_MAP);
+      float frame_end = BKE_nla_tweakedit_remap(
+          adt, saction->action->frame_end, NLATIME_CONVERT_MAP);
+
+      ANIM_draw_custom_framerange(v2d, frame_start, frame_end);
+    }
+  }
 
   /* data */
   if (ANIM_animdata_get_context(C, &ac)) {

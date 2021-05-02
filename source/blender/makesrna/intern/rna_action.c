@@ -252,6 +252,38 @@ static void rna_Action_frame_range_get(PointerRNA *ptr, float *values)
   calc_action_range((bAction *)ptr->owner_id, values, values + 1, false);
 }
 
+static void rna_Action_use_frame_range_set(PointerRNA *ptr, bool value)
+{
+  bAction *data = (bAction *)ptr->owner_id;
+
+  if (value) {
+    if ((data->frame_start == data->frame_end) && (data->frame_start == 0)) {
+      calc_action_range(data, &data->frame_start, &data->frame_end, false);
+    }
+
+    data->flag |= ACT_FRAME_RANGE;
+  }
+  else {
+    data->flag &= ~ACT_FRAME_RANGE;
+  }
+}
+
+static void rna_Action_start_frame_set(PointerRNA *ptr, float value)
+{
+  bAction *data = (bAction *)ptr->owner_id;
+
+  data->frame_start = value;
+  CLAMP_MIN(data->frame_end, data->frame_start);
+}
+
+static void rna_Action_end_frame_set(PointerRNA *ptr, float value)
+{
+  bAction *data = (bAction *)ptr->owner_id;
+
+  data->frame_end = value;
+  CLAMP_MAX(data->frame_start, data->frame_end);
+}
+
 /* Used to check if an action (value pointer)
  * is suitable to be assigned to the ID-block that is ptr. */
 bool rna_Action_id_poll(PointerRNA *ptr, PointerRNA value)
@@ -834,6 +866,41 @@ static void rna_def_action(BlenderRNA *brna)
   rna_def_action_pose_markers(brna, prop);
 
   /* properties */
+  prop = RNA_def_property(srna, "use_frame_range", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_boolean_sdna(prop, NULL, "flag", ACT_FRAME_RANGE);
+  RNA_def_property_boolean_funcs(prop, NULL, "rna_Action_use_frame_range_set");
+  RNA_def_property_ui_text(prop,
+                           "Custom Frame Range",
+                           "Explicitly specify the intended playback frame range for the action");
+  RNA_def_property_update(prop, NC_ANIMATION | ND_ANIMCHAN | NA_EDITED, NULL);
+
+  prop = RNA_def_property(srna, "is_cyclic", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_boolean_sdna(prop, NULL, "flag", ACT_CYCLIC);
+  RNA_def_property_ui_text(
+      prop,
+      "Cyclic Action",
+      "The action is intended as a cycle looping over its custom frame range. When "
+      "using Cycle-Aware Keying, newly added F-Curves will be automatically made cyclic");
+  RNA_def_property_update(prop, NC_ANIMATION | ND_ANIMCHAN | NA_EDITED, NULL);
+
+  prop = RNA_def_property(srna, "frame_start", PROP_FLOAT, PROP_TIME);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_float_sdna(prop, NULL, "frame_start");
+  RNA_def_property_float_funcs(prop, NULL, "rna_Action_start_frame_set", NULL);
+  RNA_def_property_ui_range(prop, MINFRAME, MAXFRAME, 100, 0);
+  RNA_def_property_ui_text(prop, "Start Frame", "The start frame of the intended playback range");
+  RNA_def_property_update(prop, NC_ANIMATION | ND_ANIMCHAN | NA_EDITED, NULL);
+
+  prop = RNA_def_property(srna, "frame_end", PROP_FLOAT, PROP_TIME);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_float_sdna(prop, NULL, "frame_end");
+  RNA_def_property_float_funcs(prop, NULL, "rna_Action_end_frame_set", NULL);
+  RNA_def_property_ui_range(prop, MINFRAME, MAXFRAME, 100, 0);
+  RNA_def_property_ui_text(prop, "End Frame", "The end frame of the intended playback range");
+  RNA_def_property_update(prop, NC_ANIMATION | ND_ANIMCHAN | NA_EDITED, NULL);
+
   prop = RNA_def_float_vector(srna,
                               "frame_range",
                               2,

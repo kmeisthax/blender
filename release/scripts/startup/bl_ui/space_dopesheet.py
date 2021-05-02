@@ -251,6 +251,12 @@ class DOPESHEET_HT_editor_buttons:
 
             layout.template_ID(st, "action", new="action.new", unlink="action.unlink")
 
+            layout.popover(
+                panel="DOPESHEET_PT_action_range",
+                text="",
+                icon='PREVIEW_RANGE',
+            )
+
         # Layer management
         if st.mode == 'GPENCIL':
             ob = context.active_object
@@ -707,6 +713,33 @@ class LayersDopeSheetPanel:
         return False
 
 
+class DOPESHEET_PT_action_range(Panel):
+    bl_space_type = 'DOPESHEET_EDITOR'
+    bl_region_type = 'HEADER'
+    bl_label = "Custom Frame Range"
+    bl_description = "Explicitly specify the intended playback frame range of the action"
+
+    @classmethod
+    def poll(cls, context):
+        st = context.space_data
+        return st and st.mode in {'ACTION', 'SHAPEKEY'} and st.action
+
+    def draw(self, context):
+        layout = self.layout
+        action = context.space_data.action
+
+        layout.prop(action, "use_frame_range", text="Use Custom Range")
+
+        col = layout.column()
+        col.active = action.use_frame_range
+
+        row = col.row(align=True)
+        row.prop(action, "frame_start", text="Start")
+        row.prop(action, "frame_end", text="End")
+
+        col.prop(action, "is_cyclic")
+
+
 class DOPESHEET_PT_gpencil_mode(LayersDopeSheetPanel, Panel):
     # bl_space_type = 'DOPESHEET_EDITOR'
     # bl_region_type = 'UI'
@@ -778,6 +811,7 @@ classes = (
     DOPESHEET_MT_channel_context_menu,
     DOPESHEET_MT_snap_pie,
     DOPESHEET_PT_filters,
+    DOPESHEET_PT_action_range,
     DOPESHEET_PT_gpencil_mode,
     DOPESHEET_PT_gpencil_layer_masks,
     DOPESHEET_PT_gpencil_layer_transform,

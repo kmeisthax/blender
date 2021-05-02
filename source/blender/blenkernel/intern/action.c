@@ -1496,6 +1496,28 @@ void calc_action_range(const bAction *act, float *start, float *end, short incl_
   }
 }
 
+/* Retrieve the frame range, using the custom range if set. */
+void BKE_action_get_frame_range(const struct bAction *act, float *start, float *end)
+{
+  if (act && (act->flag & ACT_FRAME_RANGE)) {
+    *start = act->frame_start;
+    *end = act->frame_end;
+
+    if (act->frame_start == act->frame_end) {
+      *end += 1.0f;
+    }
+  }
+  else {
+    calc_action_range(act, start, end, 0);
+  }
+}
+
+/* Is the action configured as cyclic. */
+bool BKE_action_is_cyclic(const struct bAction *act)
+{
+  return act && (act->flag & ACT_FRAME_RANGE) && (act->flag & ACT_CYCLIC);
+}
+
 /* Return flags indicating which transforms the given object/posechannel has
  * - if 'curves' is provided, a list of links to these curves are also returned
  */

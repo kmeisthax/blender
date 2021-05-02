@@ -167,6 +167,55 @@ void ANIM_draw_framerange(Scene *scene, View2D *v2d)
   immUnbindProgram();
 }
 
+/**
+ * Draw custom action frame range guides in the background.
+ */
+void ANIM_draw_custom_framerange(View2D *v2d, float sfra, float efra)
+{
+  /* Diagonal stripe filled area outside of the frame range. */
+  GPU_blend(GPU_BLEND_ALPHA);
+
+  GPUVertFormat *format = immVertexFormat();
+  uint pos = GPU_vertformat_attr_add(format, "pos", GPU_COMP_F32, 2, GPU_FETCH_FLOAT);
+
+  immBindBuiltinProgram(GPU_SHADER_2D_DIAG_STRIPES);
+
+  float color[4];
+  UI_GetThemeColorShadeAlpha4fv(TH_BACK, -35, -50, color);
+
+  immUniform4f("color1", color[0], color[1], color[2], color[3]);
+  immUniform4f("color2", 0.0f, 0.0f, 0.0f, 0.0f);
+  immUniform1i("size1", 2);
+  immUniform1i("size2", 4);
+
+  if (sfra < efra) {
+    immRectf(pos, v2d->cur.xmin, v2d->cur.ymin, sfra, v2d->cur.ymax);
+    immRectf(pos, efra, v2d->cur.ymin, v2d->cur.xmax, v2d->cur.ymax);
+  }
+  else {
+    immRectf(pos, v2d->cur.xmin, v2d->cur.ymin, v2d->cur.xmax, v2d->cur.ymax);
+  }
+
+  immUnbindProgram();
+
+  GPU_blend(GPU_BLEND_NONE);
+
+  /* Thin lines where the actual frames are. */
+  immBindBuiltinProgram(GPU_SHADER_2D_UNIFORM_COLOR);
+  immUniformThemeColorShade(TH_BACK, -60);
+
+  immBegin(GPU_PRIM_LINES, 4);
+
+  immVertex2f(pos, sfra, v2d->cur.ymin);
+  immVertex2f(pos, sfra, v2d->cur.ymax);
+
+  immVertex2f(pos, efra, v2d->cur.ymin);
+  immVertex2f(pos, efra, v2d->cur.ymax);
+
+  immEnd();
+  immUnbindProgram();
+}
+
 /* *************************************************** */
 /* NLA-MAPPING UTILITIES (required for drawing and also editing keyframes)  */
 
