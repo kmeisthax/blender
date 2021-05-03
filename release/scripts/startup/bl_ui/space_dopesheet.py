@@ -737,7 +737,11 @@ class DOPESHEET_PT_action_range(Panel):
         row.prop(action, "frame_start", text="Start")
         row.prop(action, "frame_end", text="End")
 
-        col.prop(action, "is_cyclic")
+        row = col.row()
+        row.prop(action, "is_cyclic")
+        row = row.row()
+        row.active = action.is_cyclic
+        row.prop(action, "use_cyclic_errors", icon="ERROR", text="", toggle=True)
 
 
 class DOPESHEET_PT_gpencil_mode(LayersDopeSheetPanel, Panel):

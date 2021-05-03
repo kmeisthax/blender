@@ -885,6 +885,15 @@ static void rna_def_action(BlenderRNA *brna)
       "using Cycle-Aware Keying, newly added F-Curves will be automatically made cyclic");
   RNA_def_property_update(prop, NC_ANIMATION | ND_ANIMCHAN | NA_EDITED, NULL);
 
+  prop = RNA_def_property(srna, "use_cyclic_errors", PROP_BOOLEAN, PROP_NONE);
+  RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
+  RNA_def_property_boolean_sdna(prop, NULL, "flag", ACT_CYCLIC_ERRORS);
+  RNA_def_property_ui_text(prop,
+                           "Cyclic Errors",
+                           "Treat curves that aren't cyclic with the specified period as having "
+                           "errors for the purpose of filtering");
+  RNA_def_property_update(prop, NC_ANIMATION | ND_ANIMCHAN | NA_EDITED, NULL);
+
   prop = RNA_def_property(srna, "frame_start", PROP_FLOAT, PROP_TIME);
   RNA_def_property_clear_flag(prop, PROP_ANIMATABLE);
   RNA_def_property_float_sdna(prop, NULL, "frame_start");
