@@ -98,6 +98,8 @@ EditBone *ED_armature_ebone_add(bArmature *arm, const char *name)
   copy_v3_fl(bone->scale_in, 1.0f);
   copy_v3_fl(bone->scale_out, 1.0f);
 
+  bone->bbone_flag = BBONE_SCALE_SEGMENTS;
+
   return bone;
 }
 
