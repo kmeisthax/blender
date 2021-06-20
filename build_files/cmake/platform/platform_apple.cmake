@@ -51,10 +51,14 @@ if(WITH_JACK)
 endif()
 
 if(NOT DEFINED LIBDIR)
-  if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
-    set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/darwin)
-  else()
-    set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/darwin_${CMAKE_OSX_ARCHITECTURES})
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/darwin_arm64)
+  else() #macOS
+    if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
+      set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/darwin)
+    else()
+      set(LIBDIR ${CMAKE_SOURCE_DIR}/../lib/darwin_${CMAKE_OSX_ARCHITECTURES})
+    endif()
   endif()
 else()
   message(STATUS "Using pre-compiled LIBDIR: ${LIBDIR}")
@@ -144,6 +148,16 @@ if(WITH_FFTW3)
   find_package(Fftw3)
 endif()
 
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  #Freetype does not ship in the iOS SDK.
+  set(FREETYPE ${LIBDIR}/freetype)
+  set(FREETYPE_INCLUDE_DIRS
+    ${LIBDIR}/freetype/include
+    ${LIBDIR}/freetype/include/freetype2
+  )
+  set(FREETYPE_LIBRARY ${LIBDIR}/freetype/lib/libfreetype.a)
+endif()
+
 # FreeType compiled with Brotli compression for woff2.
 find_package(Freetype REQUIRED)
 list(APPEND FREETYPE_LIBRARIES
@@ -218,9 +232,23 @@ if(WITH_SDL)
 endif()
 
 set(PNG_ROOT ${LIBDIR}/png)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  #libpng does not ship in the iOS SDK.
+  set(PNG_PNG_INCLUDE_DIR ${LIBDIR}/png/include)
+  set(PNG_LIBRARY ${LIBDIR}/png/lib/libpng.a ${ZLIB_LIBRARY})
+  set(PNG "${LIBDIR}/png")
+  set(PNG_INCLUDE_DIRS "${PNG}/include")
+  set(PNG_LIBPATH ${PNG}/lib) # not cmake defined
+endif()
+
 find_package(PNG REQUIRED)
 
 set(JPEG_ROOT ${LIBDIR}/jpeg)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  #libjpeg does not ship in the iOS SDK.
+  set(JPEG_INCLUDE_DIR ${LIBDIR}/jpeg/include)
+  set(JPEG_LIBRARY ${LIBDIR}/jpeg/lib/libjpeg.a)
+endif()
 find_package(JPEG REQUIRED)
 
 if(WITH_IMAGE_TIFF)
@@ -505,3 +533,10 @@ list(APPEND CMAKE_INSTALL_RPATH "@loader_path/../Resources/${BLENDER_VERSION}/li
 
 # Same as `CFBundleIdentifier` in Info.plist.
 set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.blenderfoundation.blender")
+
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  #Some part of Blender still needs GLES so here you go
+  set(WITH_SYSTEM_GLES     ON CACHE BOOL "" FORCE)
+  set(OPENGLES_LIBRARY "OpenGLES")
+  set(OPENGL_INCLUDE_DIR "${OSX_SDK_ROOT}/System/Library/Frameworks/OpenGLES.framework/Headers")
+endif()

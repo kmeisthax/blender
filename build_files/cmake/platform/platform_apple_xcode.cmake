@@ -5,11 +5,16 @@
 
 # Detect processor architecture.
 if(NOT CMAKE_OSX_ARCHITECTURES)
-  execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCHITECTURE OUTPUT_STRIP_TRAILING_WHITESPACE)
-  message(STATUS "Detected native architecture ${ARCHITECTURE}.")
-  set(CMAKE_OSX_ARCHITECTURES ${ARCHITECTURE} CACHE STRING
-    "Choose the architecture you want to build Blender for: arm64 or x86_64"
-    FORCE)
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    message(STATUS "Forcing iOS architecture to arm64.")
+    set(CMAKE_OSX_ARCHITECTURES arm64) #We don't support simulator builds yet
+  else()
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCHITECTURE OUTPUT_STRIP_TRAILING_WHITESPACE)
+    message(STATUS "Detected native architecture ${ARCHITECTURE}.")
+    set(CMAKE_OSX_ARCHITECTURES ${ARCHITECTURE} CACHE STRING
+      "Choose the architecture you want to build Blender for: arm64 or x86_64"
+      FORCE)
+  endif()
 endif()
 
 # Detect developer directory. Depending on configuration this may be either
@@ -47,20 +52,39 @@ if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode")
 endif()
 
 if(XCODE_VERSION)
-  # Construct SDKs path ourselves, because xcode-select path could be ambiguous.
-  # Both /Applications/Xcode.app/Contents/Developer or /Applications/Xcode.app would be allowed.
-  set(XCODE_SDK_DIR ${XCODE_DEVELOPER_DIR}/Platforms/MacOSX.platform/Developer/SDKs)
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    # Construct SDKs path ourselves, because xcode-select path could be ambiguous.
+    # Both /Applications/Xcode.app/Contents/Developer or /Applications/Xcode.app would be allowed.
+    set(XCODE_SDK_DIR ${XCODE_DEVELOPER_DIR}/Platforms/iPhoneOS.platform/Developer/SDKs)
 
-  # Detect SDK version to use
-  if(NOT DEFINED OSX_SYSTEM)
-    execute_process(
-        COMMAND xcodebuild -version -sdk macosx SDKVersion
-        OUTPUT_VARIABLE OSX_SYSTEM
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # Detect SDK version to use
+    if(NOT DEFINED OSX_SYSTEM)
+      execute_process(
+          COMMAND xcodebuild -version -sdk iphoneos SDKVersion
+          OUTPUT_VARIABLE OSX_SYSTEM
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+
+    message(STATUS "Detected iOS SDK ${OSX_SYSTEM} and Xcode ${XCODE_VERSION} at ${XCODE_DEVELOPER_DIR}")
+    message(STATUS "SDKs Directory: " ${XCODE_SDK_DIR})
+  else() #macOS
+    # Construct SDKs path ourselves, because xcode-select path could be ambiguous.
+    # Both /Applications/Xcode.app/Contents/Developer or /Applications/Xcode.app would be allowed.
+    set(XCODE_SDK_DIR ${XCODE_DEVELOPER_DIR}/Platforms/MacOSX.platform/Developer/SDKs)
+
+    # Detect SDK version to use
+    if(NOT DEFINED OSX_SYSTEM)
+      execute_process(
+          COMMAND xcodebuild -version -sdk macosx SDKVersion
+          OUTPUT_VARIABLE OSX_SYSTEM
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
+
+    message(STATUS "Detected OS X ${OSX_SYSTEM} and Xcode ${XCODE_VERSION} at ${XCODE_DEVELOPER_DIR}")
+    message(STATUS "SDKs Directory: " ${XCODE_SDK_DIR})
   endif()
-
-  message(STATUS "Detected OS X ${OSX_SYSTEM} and Xcode ${XCODE_VERSION} at ${XCODE_DEVELOPER_DIR}")
-  message(STATUS "SDKs Directory: " ${XCODE_SDK_DIR})
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  message(FATAL_ERROR "Cannot crossbuild to iPadOS without Xcode installed")
 else()
   # If no Xcode version found, try detecting command line tools.
   execute_process(
@@ -124,12 +148,22 @@ set(OSX_SDK_PATH)
 set(OSX_SDK_FOUND FALSE)
 set(OSX_SDKROOT)
 foreach(OSX_SDK_VERSION ${OSX_SDK_TEST_VERSIONS})
-  set(CURRENT_OSX_SDK_PATH "${XCODE_SDK_DIR}/MacOSX${OSX_SDK_VERSION}.sdk")
-  if(EXISTS ${CURRENT_OSX_SDK_PATH})
-    set(OSX_SDK_PATH "${CURRENT_OSX_SDK_PATH}")
-    set(OSX_SDKROOT macosx${OSX_SDK_VERSION})
-    set(OSX_SDK_FOUND TRUE)
-    break()
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    set(CURRENT_OSX_SDK_PATH "${XCODE_SDK_DIR}/iPhoneOS${OSX_SDK_VERSION}.sdk")
+    if(EXISTS ${CURRENT_OSX_SDK_PATH})
+      set(OSX_SDK_PATH "${CURRENT_OSX_SDK_PATH}")
+      set(OSX_SDKROOT iphoneos${OSX_SDK_VERSION})
+      set(OSX_SDK_FOUND TRUE)
+      break()
+    endif()
+  else() #macOS
+    set(CURRENT_OSX_SDK_PATH "${XCODE_SDK_DIR}/MacOSX${OSX_SDK_VERSION}.sdk")
+    if(EXISTS ${CURRENT_OSX_SDK_PATH})
+      set(OSX_SDK_PATH "${CURRENT_OSX_SDK_PATH}")
+      set(OSX_SDKROOT macosx${OSX_SDK_VERSION})
+      set(OSX_SDK_FOUND TRUE)
+      break()
+    endif()
   endif()
 endforeach()
 unset(OSX_SDK_TEST_VERSIONS)
@@ -150,22 +184,32 @@ if(${CMAKE_GENERATOR} MATCHES "Xcode")
 endif()
 unset(OSX_SDKROOT)
 
-
-if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
-  # M1 chips run Big Sur onwards.
-  set(OSX_MIN_DEPLOYMENT_TARGET 11.00)
-else()
-  # 10.13 is our min. target, if you use higher sdk, weak linking happens
-  set(OSX_MIN_DEPLOYMENT_TARGET 10.13)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(OSX_MIN_DEPLOYMENT_TARGET 14.5)
+else() #macOS
+  if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
+    # M1 chips run Big Sur onwards.
+    set(OSX_MIN_DEPLOYMENT_TARGET 11.00)
+  else()
+    # 10.13 is our min. target, if you use higher sdk, weak linking happens
+    set(OSX_MIN_DEPLOYMENT_TARGET 10.13)
+  endif()
 endif()
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "${OSX_MIN_DEPLOYMENT_TARGET}" CACHE STRING "" FORCE)
 
 if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode")
-  # Force CMAKE_OSX_DEPLOYMENT_TARGET for makefiles, will not work else (CMake bug?)
-  string(APPEND CMAKE_C_FLAGS " -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
-  string(APPEND CMAKE_CXX_FLAGS " -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
-  add_definitions("-DMACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+    # Force CMAKE_OSX_DEPLOYMENT_TARGET for makefiles, will not work else (CMake bug?)
+    string(APPEND CMAKE_C_FLAGS " -miphoneos-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    string(APPEND CMAKE_CXX_FLAGS " -miphoneos-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    add_definitions("-DMACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+  else()
+    # Force CMAKE_OSX_DEPLOYMENT_TARGET for makefiles, will not work else (CMake bug?)
+    string(APPEND CMAKE_C_FLAGS " -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    string(APPEND CMAKE_CXX_FLAGS " -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    add_definitions("-DMACOSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+  endif()
 endif()
 
 if(WITH_COMPILER_CCACHE)

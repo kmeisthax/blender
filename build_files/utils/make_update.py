@@ -37,6 +37,7 @@ def parse_arguments():
     parser.add_argument("--svn-branch", default=None)
     parser.add_argument("--git-command", default="git")
     parser.add_argument("--use-centos-libraries", action="store_true")
+    parser.add_argument("--crossbuild", default=None)
     return parser.parse_args()
 
 
@@ -54,7 +55,11 @@ def svn_update(args, release_version):
 
     # Checkout precompiled libraries
     if sys.platform == 'darwin':
-        if platform.machine() == 'x86_64':
+        if args.crossbuild == "ipados":
+            #iPadOS builds always run on ARM64.
+            #TODO: What if the user wants to use a device simulator?
+            lib_platform = "darwin_arm64"
+        elif platform.machine() == 'x86_64':
             lib_platform = "darwin"
         elif platform.machine() == 'arm64':
             lib_platform = "darwin_arm64"

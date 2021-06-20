@@ -110,28 +110,46 @@ else()
       OUTPUT_VARIABLE MACOSX_SDK_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     if(NOT CMAKE_OSX_ARCHITECTURES)
-      execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCHITECTURE OUTPUT_STRIP_TRAILING_WHITESPACE)
-      message(STATUS "Detected native architecture ${ARCHITECTURE}.")
-      set(CMAKE_OSX_ARCHITECTURES "${ARCHITECTURE}")
+      if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+        message(STATUS "Forcing iOS architecture to arm64.")
+        set(CMAKE_OSX_ARCHITECTURES "arm64") #We don't support simulator builds yet
+      else() #macOS
+        execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCHITECTURE OUTPUT_STRIP_TRAILING_WHITESPACE)
+        message(STATUS "Detected native architecture ${ARCHITECTURE}.")
+        set(CMAKE_OSX_ARCHITECTURES "${ARCHITECTURE}")
+      endif()
     endif()
-    if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
-      set(OSX_DEPLOYMENT_TARGET 10.13)
-    else()
-      set(OSX_DEPLOYMENT_TARGET 11.00)
+
+    if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+      set(OSX_DEPLOYMENT_TARGET 14.5)
+      set(OSX_SYSROOT ${XCODE_DEV_PATH}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk)
+    else() #macOS
+      if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
+        set(OSX_DEPLOYMENT_TARGET 10.13)
+      else()
+        set(OSX_DEPLOYMENT_TARGET 11.00)
+      endif()
+      set(OSX_SYSROOT ${XCODE_DEV_PATH}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
     endif()
-    set(OSX_SYSROOT ${XCODE_DEV_PATH}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)
 
     if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "arm64")
       set(BLENDER_PLATFORM_ARM ON)
     endif()
 
-    set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
-    set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
-    set(PLATFORM_LDFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
-    if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
-      set(PLATFORM_BUILD_TARGET --build=x86_64-apple-darwin17.0.0) # OS X 10.13
+    if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+      set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
+      set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
+      set(PLATFORM_LDFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
+      set(PLATFORM_BUILD_TARGET --build=aarch64-apple-ios14.5.0) # iPadOS 14.5
     else()
-      set(PLATFORM_BUILD_TARGET --build=aarch64-apple-darwin20.0.0) # macOS 11.00
+      set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
+      set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
+      set(PLATFORM_LDFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
+      if("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64")
+        set(PLATFORM_BUILD_TARGET --build=x86_64-apple-darwin17.0.0) # OS X 10.13
+      else()
+        set(PLATFORM_BUILD_TARGET --build=aarch64-apple-darwin20.0.0) # macOS 11.00
+      endif()
     endif()
     set(PLATFORM_CMAKE_FLAGS
       -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}

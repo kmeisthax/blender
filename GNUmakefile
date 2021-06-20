@@ -130,6 +130,7 @@ Environment Variables
    * BUILD_DIR:             Override default build path.
    * PYTHON:                Use this for the Python command (used for checking tools).
    * NPROCS:                Number of processes to use building (auto-detect when omitted).
+   * CROSSBUILD:			Set to "ipados" to enable cross-compilation to iPadOS.
 
 Documentation Targets
    Not associated with building Blender.
@@ -164,6 +165,12 @@ BUILD_TYPE:=Release
 
 # CMake arguments, assigned to local variable to make it mutable.
 CMAKE_CONFIG_ARGS := $(BUILD_CMAKE_ARGS)
+
+# Enable iPad crossbuild
+ifeq ($(CROSSBUILD),ipados)
+	OS_NCASE:=ipados
+	CMAKE_CONFIG_ARGS:=-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 $(CMAKE_CONFIG_ARGS)
+endif
 
 ifndef BUILD_DIR
 	BUILD_DIR:=$(shell dirname "$(BLENDER_DIR)")/build_$(OS_NCASE)
@@ -314,7 +321,6 @@ ifdef DISPLAY
 else
 	CMAKE_CONFIG_TOOL = ccmake
 endif
-
 
 # -----------------------------------------------------------------------------
 # Build Blender
@@ -522,6 +528,9 @@ icons_geom: .FORCE
 
 update: .FORCE
 	@$(PYTHON) ./build_files/utils/make_update.py
+
+update_ipados: .FORCE
+	$(PYTHON) ./build_files/utils/make_update.py --crossbuild=ipados
 
 update_code: .FORCE
 	@$(PYTHON) ./build_files/utils/make_update.py --no-libraries
