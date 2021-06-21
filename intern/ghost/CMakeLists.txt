@@ -154,6 +154,30 @@ if(WITH_HEADLESS OR WITH_GHOST_SDL)
     endif()
   endif()
 
+elseif(APPLE AND ${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
+  add_compile_definitions(__APPLE_IOS__)
+  list(APPEND SRC
+    intern/GHOST_DisplayManagerUIKit.mm
+    intern/GHOST_SystemUIKit.mm
+    intern/GHOST_WindowUIKit.mm
+
+    intern/GHOST_DisplayManagerUIKit.h
+    intern/GHOST_SystemUIKit.h
+    intern/GHOST_WindowUIKit.h
+    intern/GHOST_WindowViewUIKit.h
+  )
+
+  if(NOT WITH_GL_EGL)
+    list(APPEND SRC
+      intern/GHOST_ContextCGL.mm
+
+      intern/GHOST_ContextCGL.h
+    )
+  endif()
+
+  if(WITH_INPUT_NDOF)
+    message(FATAL_ERROR "NDOFManager not ported to iPadOS")
+  endif()
 elseif(APPLE AND NOT WITH_GHOST_X11)
   list(APPEND SRC
     intern/GHOST_DisplayManagerCocoa.mm
