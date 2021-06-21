@@ -25,6 +25,8 @@
 #  include "GHOST_SystemSDL.h"
 #elif defined(WIN32)
 #  include "GHOST_SystemWin32.h"
+#elif defined(__APPLE_IOS__)
+#  include "GHOST_SystemUIKit.h"
 #elif defined(__APPLE__)
 #  include "GHOST_SystemCocoa.h"
 #endif
@@ -58,6 +60,8 @@ GHOST_TSuccess GHOST_ISystem::createSystem()
     m_system = new GHOST_SystemSDL();
 #elif defined(WIN32)
     m_system = new GHOST_SystemWin32();
+#elif defined(__APPLE_IOS__)
+    m_system = new GHOST_SystemUIKit();
 #elif defined(__APPLE__)
     m_system = new GHOST_SystemCocoa();
 #endif
