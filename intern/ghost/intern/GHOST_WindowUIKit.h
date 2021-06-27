@@ -33,7 +33,8 @@
 @class CAMetalLayer;
 @class GHOSTMetalUIView;
 @class GHOSTOpenGLUIView;
-@class NSCursor;
+@class GHOSTMetalUIViewController;
+@class GHOSTOpenGLUIViewController;
 @class UIScreen;
 
 class GHOST_SystemUIKit;

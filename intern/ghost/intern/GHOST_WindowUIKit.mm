@@ -25,7 +25,7 @@
 #if defined(WITH_GL_EGL)
 #  include "GHOST_ContextEGL.h"
 #else
-#  include "GHOST_ContextCGL.h"
+#  include "GHOST_ContextEAGL.h"
 #endif
 
 #include <UIKit/UIKit.h>
@@ -102,7 +102,7 @@
 
 /* UIView for handling input and drawing. */
 #define UI_VIEW_CLASS GHOSTOpenGLUIView
-#define UI_VIEW_BASE_CLASS UIOpenGLView
+#define UI_VIEW_BASE_CLASS GLKView
 #include "GHOST_WindowViewUIKit.h"
 #undef UI_VIEW_CLASS
 #undef UI_VIEW_BASE_CLASS
@@ -110,6 +110,18 @@
 #define UI_VIEW_CLASS GHOSTMetalUIView
 #define UI_VIEW_BASE_CLASS UIView
 #include "GHOST_WindowViewUIKit.h"
+#undef UI_VIEW_CLASS
+#undef UI_VIEW_BASE_CLASS
+
+#define UI_VIEW_CLASS GHOSTOpenGLUIViewController
+#define UI_VIEW_BASE_CLASS GLKViewController
+#include "GHOST_WindowViewControllerUIKit.h"
+#undef UI_VIEW_CLASS
+#undef UI_VIEW_BASE_CLASS
+
+#define UI_VIEW_CLASS GHOSTMetalUIViewController
+#define UI_VIEW_BASE_CLASS UIViewController
+#include "GHOST_WindowViewControllerUIKit.h"
 #undef UI_VIEW_CLASS
 #undef UI_VIEW_BASE_CLASS
 
@@ -144,6 +156,7 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindow *ui_window,
   // Create UIView inside the window
   id<MTLDevice> metalDevice = MTLCreateSystemDefaultDevice();
   UIView *view;
+  UIViewController *controller;
 
   if (metalDevice) {
     // Create metal layer and view if supported
@@ -160,19 +173,21 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindow *ui_window,
     [m_metalView setLayer:m_metalLayer];
     [m_metalView setSystemAndWindowUIKit:systemUIKit windowUIKit:this];
     view = m_metalView;
+
+    m_metalViewController = [[GHOSTMetalUIViewController alloc] initWithView:m_metalView];
+    controller = m_metalViewController;
   }
   else {
     // Fallback to OpenGL view if there is no Metal support
     m_openGLView = [[GHOSTOpenGLUIView alloc] initWithFrame:rect];
     [m_openGLView setSystemAndWindowUIKit:systemUIKit windowUIKit:this];
     view = m_openGLView;
+
+    m_openGLViewController = [[GHOSTOpenGLViewController alloc] initWithView:m_openGLView];
+    controller = m_openGLViewController;
   }
 
-    //TODO: How the hell do I get the view I just made onto the window?!
-  [m_window setContentView:view];
-  [m_window setInitialFirstResponder:view];
-
-  [m_window makeKeyAndOrderFront:nil];
+  [m_window setRootViewController:controller];
 
   setDrawingContextType(type);
   updateDrawingContext();
@@ -219,9 +234,17 @@ GHOST_WindowUIKit::~GHOST_WindowUIKit()
     [m_openGLView release];
     m_openGLView = nil;
   }
+  if (m_openGLViewController) {
+    [m_openGLViewController release];
+    m_openGLViewController = nil;
+  }
   if (m_metalView) {
     [m_metalView release];
     m_metalView = nil;
+  }
+  if (m_metalViewController) {
+    [m_metalViewController release];
+    m_metalViewController = nil;
   }
   if (m_metalLayer) {
     [m_metalLayer release];
@@ -601,7 +624,7 @@ GHOST_Context *GHOST_WindowUIKit::newDrawingContext(GHOST_TDrawingContextType ty
 {
   if (type == GHOST_kDrawingContextTypeOpenGL) {
 
-    GHOST_Context *context = new GHOST_ContextCGL(
+    GHOST_Context *context = new GHOST_ContextEAGL(
         m_wantStereoVisual, m_metalView, m_metalLayer, m_openGLView);
 
     if (context->initializeDrawingContext())
