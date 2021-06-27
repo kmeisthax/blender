@@ -36,6 +36,8 @@
 @class GHOSTMetalUIViewController;
 @class GHOSTOpenGLUIViewController;
 @class UIScreen;
+@class UIWindow;
+@class UIWindowScene;
 
 class GHOST_SystemUIKit;
 
@@ -303,10 +305,13 @@ class GHOST_WindowUIKit : public GHOST_Window {
 
   /** The window containing the view */
   UIWindow *m_window;
+  UIWindowScene *m_windowScene;
 
   /** The view, either Metal or OpenGL */
   GHOSTOpenGLUIView *m_openGLView;
+  GHOSTOpenGLUIViewController *m_openGLViewController;
   GHOSTMetalUIView *m_metalView;
+  GHOSTMetalUIViewController *m_metalViewController;
   CAMetalLayer *m_metalLayer;
 
   /** The mother SystemUIKit class to send events */

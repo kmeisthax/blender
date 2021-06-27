@@ -71,7 +71,6 @@
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSesssion *)session
                     options:(UISceneConnectionOptions *)connectionOptions {
     UIWindow* window = [[scene windows] firstObject];
-    associatedWindow = new GHOST_WindowUIKit(window, systemUIKit, "");
 }
 
 - (void)windowScene:(UIWindowScene *) windowScene
@@ -127,7 +126,8 @@
 
 #pragma mark initialization / finalization
 
-GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindow *ui_window,
+GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindowScene *ui_windowscene,
+                                     UIWindow *ui_window,
                                      GHOST_SystemUIKit *systemUIKit,
                                      const char *title,
                                      GHOST_TWindowState state,
@@ -136,6 +136,7 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindow *ui_window,
                                      bool is_debug,
                                      bool is_dialog)
     : GHOST_Window(0, 0, state, stereoVisual, false),
+      m_windowScene(ui_windowscene),
       m_window(ui_window),
       m_openGLView(nil),
       m_metalView(nil),
@@ -197,19 +198,8 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindow *ui_window,
 
   m_tablet = GHOST_TABLET_DATA_NONE;
 
-  GHOSTWindowSceneDelegate *windowDelegate = [[GHOSTWindowSceneDelegate alloc] init];
+  GHOSTWindowSceneDelegate *windowDelegate = [m_windowscene delegate];
   [windowDelegate setSystemAndWindowUIKit:systemUIKit windowUIKit:this];
-  [m_window setDelegate:windowDelegate];
-
-  [m_window setAcceptsMouseMovedEvents:YES];
-
-  NSView *contentview = [m_window contentView];
-  [contentview setAllowedTouchTypes:(NSTouchTypeMaskDirect | NSTouchTypeMaskIndirect)];
-
-  [m_window registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType,
-                                                              NSStringPboardType,
-                                                              NSTIFFPboardType,
-                                                              nil]];
 
   if (state == GHOST_kWindowStateFullScreen)
     setState(GHOST_kWindowStateFullScreen);
