@@ -280,23 +280,14 @@ void GHOST_WindowUIKit::setTitle(const char *title)
     if (len > 0) {
       fileStrRange.length = len;
       associatedFileName = [windowTitle substringWithRange:fileStrRange];
-      [m_window setTitle:[associatedFileName lastPathComponent]];
-
-      @try {
-        [m_window setRepresentedFilename:associatedFileName];
-      }
-      @catch (NSException *e) {
-        printf("\nInvalid file path given in window title");
-      }
+      [m_windowScene setTitle:[associatedFileName lastPathComponent]];
     }
     else {
-      [m_window setTitle:windowTitle];
-      [m_window setRepresentedFilename:@""];
+      [m_windowScene setTitle:windowTitle];
     }
   }
   else {
-    [m_window setTitle:windowTitle];
-    [m_window setRepresentedFilename:@""];
+    [m_windowScene setTitle:windowTitle];
   }
 
   [windowTitle release];
@@ -309,7 +300,7 @@ std::string GHOST_WindowUIKit::getTitle() const
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-  NSString *windowTitle = [m_window title];
+  NSString *windowTitle = [m_windowScene title];
 
   std::string title;
   if (windowTitle != nil) {
