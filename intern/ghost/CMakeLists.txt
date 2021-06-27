@@ -169,9 +169,9 @@ elseif(APPLE AND ${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
 
   if(NOT WITH_GL_EGL)
     list(APPEND SRC
-      intern/GHOST_ContextCGL.mm
+      intern/GHOST_ContextEAGL.mm
 
-      intern/GHOST_ContextCGL.h
+      intern/GHOST_ContextEAGL.h
     )
   endif()
 
