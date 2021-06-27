@@ -633,131 +633,22 @@ GHOST_TSuccess GHOST_WindowUIKit::invalidate()
 
 GHOST_TSuccess GHOST_WindowUIKit::setProgressBar(float progress)
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  if ((progress >= 0.0) && (progress <= 1.0)) {
-    NSImage *dockIcon = [[NSImage alloc] initWithSize:NSMakeSize(128, 128)];
-
-    [dockIcon lockFocus];
-
-    [[NSImage imageNamed:@"NSApplicationIcon"] drawAtPoint:NSZeroPoint
-                                                  fromRect:NSZeroRect
-                                                 operation:NSCompositingOperationSourceOver
-                                                  fraction:1.0];
-
-    NSRect progressRect = {{8, 8}, {112, 14}};
-    NSBezierPath *progressPath;
-
-    /* Draw white track. */
-    [[[NSColor whiteColor] colorWithAlphaComponent:0.6] setFill];
-    progressPath = [NSBezierPath bezierPathWithRoundedRect:progressRect xRadius:7 yRadius:7];
-    [progressPath fill];
-
-    /* Black progress fill. */
-    [[[NSColor blackColor] colorWithAlphaComponent:0.7] setFill];
-    progressRect = NSInsetRect(progressRect, 2, 2);
-    progressRect.size.width *= progress;
-    progressPath = [NSBezierPath bezierPathWithRoundedRect:progressRect xRadius:5 yRadius:5];
-    [progressPath fill];
-
-    [dockIcon unlockFocus];
-
-    [NSApp setApplicationIconImage:dockIcon];
-    [dockIcon release];
-
-    m_progressBarVisible = true;
-  }
-
-  [pool drain];
+  //iPadOS does not have a concept of a progress bar.
+  //TODO: Request background time?
   return GHOST_kSuccess;
-}
-
-static void postNotification()
-{
-  NSUserNotification *notification = [[NSUserNotification alloc] init];
-  notification.title = @"Blender Progress Notification";
-  notification.informativeText = @"Calculation is finished.";
-  notification.soundName = NSUserNotificationDefaultSoundName;
-  [[NSUserNotificationCenter defaultUserNotificationCenter] deliverNotification:notification];
-  [notification release];
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::endProgressBar()
 {
-  if (!m_progressBarVisible)
-    return GHOST_kFailure;
-  m_progressBarVisible = false;
-
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  NSImage *dockIcon = [[NSImage alloc] initWithSize:NSMakeSize(128, 128)];
-  [dockIcon lockFocus];
-  [[NSImage imageNamed:@"NSApplicationIcon"] drawAtPoint:NSZeroPoint
-                                                fromRect:NSZeroRect
-                                               operation:NSCompositingOperationSourceOver
-                                                fraction:1.0];
-  [dockIcon unlockFocus];
-  [NSApp setApplicationIconImage:dockIcon];
-
-  // We use notifications to inform the user when the progress reached 100%
-  // Atm. just fire this when the progressbar ends, the behavior is controlled
-  // in the NotificationCenter If Blender is not frontmost window, a message
-  // pops up with sound, in any case an entry in notifications
-  if ([NSUserNotificationCenter respondsToSelector:@selector(defaultUserNotificationCenter)]) {
-    postNotification();
-  }
-
-  [dockIcon release];
-
-  [pool drain];
+  //TODO: Send local push notification on task completion.
   return GHOST_kSuccess;
 }
 
 #pragma mark Cursor handling
 
-static NSCursor *getImageCursor(GHOST_TStandardCursor shape, NSString *name, NSPoint hotspot)
-{
-  static NSCursor *cursors[(int)GHOST_kStandardCursorNumCursors] = {0};
-  static bool loaded[(int)GHOST_kStandardCursorNumCursors] = {false};
-
-  const int index = (int)shape;
-  if (!loaded[index]) {
-    /* Load image from file in application Resources folder. */
-    /* clang-format off */
-    @autoreleasepool {
-      /* clang-format on */
-      NSImage *image = [NSImage imageNamed:name];
-      if (image != NULL) {
-        cursors[index] = [[NSCursor alloc] initWithImage:image hotSpot:hotspot];
-      }
-    }
-
-    loaded[index] = true;
-  }
-
-  return cursors[index];
-}
-
 void GHOST_WindowUIKit::loadCursor(bool visible, GHOST_TStandardCursor shape) const
 {
-  static bool systemCursorVisible = true;
-  if (visible != systemCursorVisible) {
-    if (visible) {
-      [NSCursor unhide];
-      systemCursorVisible = true;
-    }
-    else {
-      [NSCursor hide];
-      systemCursorVisible = false;
-    }
-  }
-
-  NSCursor *cursor = getStandardCursor(shape);
-  if (cursor == NULL) {
-    cursor = getStandardCursor(GHOST_kStandardCursorDefault);
-  }
-
-  [cursor set];
+  //TODO: iPadOS does not support arbitrary mouse cursors out of the box.
 }
 
 bool GHOST_WindowUIKit::isDialog() const
@@ -767,91 +658,26 @@ bool GHOST_WindowUIKit::isDialog() const
 
 GHOST_TSuccess GHOST_WindowUIKit::setWindowCursorVisibility(bool visible)
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  if ([m_window isVisible]) {
-    loadCursor(visible, getCursorShape());
-  }
-
-  [pool drain];
+  //TODO: see above note on mouse cursors
   return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setWindowCursorGrab(GHOST_TGrabCursorMode mode)
 {
-  GHOST_TSuccess err = GHOST_kSuccess;
-
-  if (mode != GHOST_kGrabDisable) {
-    // No need to perform grab without warp as it is always on in OS X
-    if (mode != GHOST_kGrabNormal) {
-      NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-      m_systemUIKit->getCursorPosition(m_cursorGrabInitPos[0], m_cursorGrabInitPos[1]);
-      setCursorGrabAccum(0, 0);
-
-      if (mode == GHOST_kGrabHide) {
-        setWindowCursorVisibility(false);
-      }
-
-      // Make window key if it wasn't to get the mouse move events
-      [m_window makeKeyWindow];
-
-      [pool drain];
-    }
-  }
-  else {
-    if (m_cursorGrab == GHOST_kGrabHide) {
-      m_systemUIKit->setCursorPosition(m_cursorGrabInitPos[0], m_cursorGrabInitPos[1]);
-      setWindowCursorVisibility(true);
-    }
-
-    /* Almost works without but important otherwise the mouse GHOST location
-     * can be incorrect on exit. */
-    setCursorGrabAccum(0, 0);
-    m_cursorGrabBounds.m_l = m_cursorGrabBounds.m_r = -1; /* disable */
-  }
-  return err;
+  //TODO: later iPadOS does support cursor locking
+  return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setWindowCursorShape(GHOST_TStandardCursor shape)
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  if ([m_window isVisible]) {
-    loadCursor(getCursorVisibility(), shape);
-  }
-
-  [pool drain];
+  //TODO: Cursors
   return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::hasCursorShape(GHOST_TStandardCursor shape)
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  GHOST_TSuccess success = (getStandardCursor(shape)) ? GHOST_kSuccess : GHOST_kFailure;
-  [pool drain];
-  return success;
-}
-
-/* Reverse the bits in a GHOST_TUns8 */
-#if 0
-static GHOST_TUns8 uns8ReverseBits(GHOST_TUns8 ch)
-{
-  ch= ((ch >> 1) & 0x55) | ((ch << 1) & 0xAA);
-  ch= ((ch >> 2) & 0x33) | ((ch << 2) & 0xCC);
-  ch= ((ch >> 4) & 0x0F) | ((ch << 4) & 0xF0);
-  return ch;
-}
-#endif
-
-/** Reverse the bits in a GHOST_TUns16 */
-static GHOST_TUns16 uns16ReverseBits(GHOST_TUns16 shrt)
-{
-  shrt = ((shrt >> 1) & 0x5555) | ((shrt << 1) & 0xAAAA);
-  shrt = ((shrt >> 2) & 0x3333) | ((shrt << 2) & 0xCCCC);
-  shrt = ((shrt >> 4) & 0x0F0F) | ((shrt << 4) & 0xF0F0);
-  shrt = ((shrt >> 8) & 0x00FF) | ((shrt << 8) & 0xFF00);
-  return shrt;
+  //TODO: Cursors
+  return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setWindowCustomCursorShape(GHOST_TUns8 *bitmap,
@@ -862,68 +688,6 @@ GHOST_TSuccess GHOST_WindowUIKit::setWindowCustomCursorShape(GHOST_TUns8 *bitmap
                                                              int hotY,
                                                              bool canInvertColor)
 {
-  int y, nbUns16;
-  NSPoint hotSpotPoint;
-  NSBitmapImageRep *cursorImageRep;
-  NSImage *cursorImage;
-  NSSize imSize;
-  GHOST_TUns16 *cursorBitmap;
-
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  if (m_customCursor) {
-    [m_customCursor release];
-    m_customCursor = nil;
-  }
-
-  cursorImageRep = [[NSBitmapImageRep alloc]
-      initWithBitmapDataPlanes:nil
-                    pixelsWide:sizex
-                    pixelsHigh:sizey
-                 bitsPerSample:1
-               samplesPerPixel:2
-                      hasAlpha:YES
-                      isPlanar:YES
-                colorSpaceName:NSDeviceWhiteColorSpace
-                   bytesPerRow:(sizex / 8 + (sizex % 8 > 0 ? 1 : 0))
-                  bitsPerPixel:1];
-
-  cursorBitmap = (GHOST_TUns16 *)[cursorImageRep bitmapData];
-  nbUns16 = [cursorImageRep bytesPerPlane] / 2;
-
-  for (y = 0; y < nbUns16; y++) {
-#if !defined(__LITTLE_ENDIAN__)
-    cursorBitmap[y] = uns16ReverseBits((bitmap[2 * y] << 0) | (bitmap[2 * y + 1] << 8));
-    cursorBitmap[nbUns16 + y] = uns16ReverseBits((mask[2 * y] << 0) | (mask[2 * y + 1] << 8));
-#else
-    cursorBitmap[y] = uns16ReverseBits((bitmap[2 * y + 1] << 0) | (bitmap[2 * y] << 8));
-    cursorBitmap[nbUns16 + y] = uns16ReverseBits((mask[2 * y + 1] << 0) | (mask[2 * y] << 8));
-#endif
-
-    /* Flip white cursor with black outline to black cursor with white outline
-     * to match macOS platform conventions. */
-    if (canInvertColor) {
-      cursorBitmap[y] = ~cursorBitmap[y];
-    }
-  }
-
-  imSize.width = sizex;
-  imSize.height = sizey;
-  cursorImage = [[NSImage alloc] initWithSize:imSize];
-  [cursorImage addRepresentation:cursorImageRep];
-
-  hotSpotPoint.x = hotX;
-  hotSpotPoint.y = hotY;
-
-  // foreground and background color parameter is not handled for now (10.6)
-  m_customCursor = [[NSCursor alloc] initWithImage:cursorImage hotSpot:hotSpotPoint];
-
-  [cursorImageRep release];
-  [cursorImage release];
-
-  if ([m_window isVisible]) {
-    loadCursor(getCursorVisibility(), GHOST_kStandardCursorCustom);
-  }
-  [pool drain];
+  //TODO: Cursors
   return GHOST_kSuccess;
 }
