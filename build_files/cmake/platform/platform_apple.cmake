@@ -194,9 +194,15 @@ if(SYSTEMSTUBS_LIBRARY)
 endif()
 
 string(APPEND PLATFORM_CFLAGS " -pipe -funsigned-char -fno-strict-aliasing")
-set(PLATFORM_LINKFLAGS
-  "-fexceptions -framework CoreServices -framework Foundation -framework IOKit -framework AppKit -framework Cocoa -framework Carbon -framework AudioUnit -framework AudioToolbox -framework CoreAudio -framework Metal -framework QuartzCore"
-)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(PLATFORM_LINKFLAGS
+    "-fexceptions -framework CoreServices -framework Foundation -framework IOKit -framework UIKit -framework GLKit -framework AudioToolbox -framework CoreAudio -framework Metal -framework QuartzCore"
+  )
+else()
+  set(PLATFORM_LINKFLAGS
+    "-fexceptions -framework CoreServices -framework Foundation -framework IOKit -framework AppKit -framework Cocoa -framework Carbon -framework AudioUnit -framework AudioToolbox -framework CoreAudio -framework Metal -framework QuartzCore"
+  )
+endif()
 
 list(APPEND PLATFORM_LINKLIBS c++)
 
@@ -537,6 +543,7 @@ set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "org.blenderfoundation.blend
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
   #Some part of Blender still needs GLES so here you go
   set(WITH_SYSTEM_GLES     ON CACHE BOOL "" FORCE)
+  set(WITH_GLEW_ES         ON CACHE BOOL "" FORCE)
   set(OPENGLES_LIBRARY "OpenGLES")
   set(OPENGL_INCLUDE_DIR "${OSX_SDK_ROOT}/System/Library/Frameworks/OpenGLES.framework/Headers")
   add_definitions("-DGLES_SILENCE_DEPRECATION")
