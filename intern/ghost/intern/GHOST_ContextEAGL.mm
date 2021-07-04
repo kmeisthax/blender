@@ -25,9 +25,11 @@
 
 #include "GHOST_ContextEAGL.h"
 
+#include <CoreGraphics/CGGeometry.h>
 #include <UIKit/UIKit.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
+#include <GLKit/GLKit.h>
 
 #include <cassert>
 #include <vector>
@@ -45,13 +47,13 @@ static void ghost_fatal_error_dialog(const char *msg)
     
     UIAlertAction *defaultAction = [UIAlertAction actionWithTitle:@"Quit"
         style:UIAlertActionStyleDefault
-        handler:^(UIAlertAction *action) {exit(1)}];
+        handler:^(UIAlertAction *action) {exit(1);}];
     
     [alert addAction:defaultAction];
 
     //TODO: This code assumes all active scenes are going to be equally viable
     //to deliver alerts in.
-    UIScene* scene = [[[UIApplication sharedApplication] connectedScenes] anyObject];
+    UIWindowScene* scene = (UIWindowScene *)[[[UIApplication sharedApplication] connectedScenes] anyObject];
     if (!scene) {
         exit(1); //can't do anything without a scene to connect this alert to
     }
@@ -107,9 +109,7 @@ GHOST_ContextEAGL::~GHOST_ContextEAGL()
 
   if (m_openGLContext != nil) {
     if (m_openGLContext == [EAGLContext currentContext]) {
-      if (m_openGLView) {
-        [m_openGLView clearGLContext];
-      }
+      //TODO: How do you clear the context off of GLKView?
     }
 
     if (m_openGLContext != s_sharedOpenGLContext || s_sharedCount == 1) {
@@ -214,9 +214,7 @@ GHOST_TSuccess GHOST_ContextEAGL::updateDrawingContext()
       metalUpdateFramebuffer();
     }
     else if (m_openGLView) {
-      NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-      [m_openGLContext update];
-      [pool drain];
+      //the Cocoa version of this sends `update` but EAGLContext doesn't do that
     }
 
     return GHOST_kSuccess;
@@ -239,10 +237,10 @@ GHOST_TSuccess GHOST_ContextEAGL::initializeDrawingContext()
   //makeAttribList(attribs, m_coreProfile, m_stereoVisual, needAlpha, softwareGL);
 
   if (s_sharedOpenGLContext != nil) {
-    m_openGLContext = [[EAGLContext alloc] initWithApi:kEAGLRenderingAPIOpenGLES3
+    m_openGLContext = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3
       sharegroup:[s_sharedOpenGLContext sharegroup]];
   } else {
-    m_openGLContext = [[EAGLContext alloc] initWithApi:kEAGLRenderingAPIOpenGLES3];
+    m_openGLContext = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3];
   }
 
   if (m_openGLContext == nil) {
@@ -255,7 +253,7 @@ GHOST_TSuccess GHOST_ContextEAGL::initializeDrawingContext()
     GLint major = 0, minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
-    fprintf(stderr, "OpenGL version %d.%d%s\n", major, minor, softwareGL ? " (software)" : "");
+    fprintf(stderr, "OpenGL version %d.%d\n", major, minor);
     fprintf(stderr, "Renderer: %s\n", glGetString(GL_RENDERER));
   }
 
@@ -278,12 +276,9 @@ GHOST_TSuccess GHOST_ContextEAGL::initializeDrawingContext()
     }
   }
   else if (m_openGLView) {
-    [m_openGLView setOpenGLContext:m_openGLContext];
-    [m_openGLContext setView:m_openGLView];
+    [m_openGLView setContext:m_openGLContext];
     initClearGL();
   }
-
-  [m_openGLContext flushBuffer];
 
   if (s_sharedCount == 0)
     s_sharedOpenGLContext = m_openGLContext;
@@ -411,8 +406,8 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
 {
   assert(m_defaultFramebuffer != 0);
 
-  NSRect bounds = [m_metalView bounds];
-  NSSize backingSize = [m_metalView convertSizeToBacking:bounds.size];
+  CGRect bounds = [m_metalView bounds];
+  CGSize backingSize = [m_metalView convertSizeToBacking:bounds.size];
   size_t width = (size_t)backingSize.width;
   size_t height = (size_t)backingSize.height;
 
@@ -443,11 +438,10 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
   }
 
   // Create an OpenGL texture
-  CVOpenGLTextureCacheRef cvGLTexCache = nil;
-  cvret = CVOpenGLTextureCacheCreate(kCFAllocatorDefault,
+  CVOpenGLESTextureCacheRef cvGLTexCache = nil;
+  cvret = CVOpenGLESTextureCacheCreate(kCFAllocatorDefault,
                                      nil,
-                                     m_openGLContext.EAGLContextObj,
-                                     m_openGLContext.pixelFormat.EAGLPixelFormatObj,
+                                     m_openGLContext,
                                      nil,
                                      &cvGLTexCache);
   if (cvret != kCVReturnSuccess) {
@@ -455,9 +449,11 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
         "GHOST_ContextEAGL::metalUpdateFramebuffer: CVOpenGLTextureCacheCreate failed!");
   }
 
-  CVOpenGLTextureRef cvGLTex = nil;
-  cvret = CVOpenGLTextureCacheCreateTextureFromImage(
-      kCFAllocatorDefault, cvGLTexCache, cvPixelBuffer, nil, &cvGLTex);
+  CVOpenGLESTextureRef cvGLTex = nil;
+  cvret = CVOpenGLESTextureCacheCreateTextureFromImage(
+      kCFAllocatorDefault, cvGLTexCache, cvPixelBuffer, nil,
+      GL_TEXTURE_2D, GL_RGBA, width, height, GL_RGBA, GL_UNSIGNED_BYTE, 0,
+      &cvGLTex);
   if (cvret != kCVReturnSuccess) {
     ghost_fatal_error_dialog(
         "GHOST_ContextEAGL::metalUpdateFramebuffer: "
@@ -465,7 +461,7 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
   }
 
   unsigned int glTex;
-  glTex = CVOpenGLTextureGetName(cvGLTex);
+  glTex = CVOpenGLESTextureGetName(cvGLTex);
 
   // Create a Metal texture
   CVMetalTextureCacheRef cvMetalTexCache = nil;
@@ -508,8 +504,8 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
   [m_metalLayer setDrawableSize:CGSizeMake((CGFloat)width, (CGFloat)height)];
 
   CVPixelBufferRelease(cvPixelBuffer);
-  CVOpenGLTextureCacheRelease(cvGLTexCache);
-  CVOpenGLTextureRelease(cvGLTex);
+  CFRelease(cvGLTexCache);
+  CFRelease(cvGLTex);
   CFRelease(cvMetalTexCache);
   CFRelease(cvMetalTex);
 }

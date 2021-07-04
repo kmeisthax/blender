@@ -35,6 +35,7 @@
 @class GHOSTOpenGLUIView;
 @class GHOSTMetalUIViewController;
 @class GHOSTOpenGLUIViewController;
+@class GHOSTWindowSceneDelegate;
 @class UIScreen;
 @class UIWindow;
 @class UIWindowScene;
