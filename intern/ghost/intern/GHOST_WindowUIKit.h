@@ -30,7 +30,6 @@
 
 #include "GHOST_Window.h"
 
-@class CAMetalLayer;
 @class GHOSTMetalUIView;
 @class GHOSTOpenGLUIView;
 @class GHOSTMetalUIViewController;
@@ -58,13 +57,15 @@ class GHOST_WindowUIKit : public GHOST_Window {
    * \param type: The type of drawing context installed in this window.
    * \param stereoVisual: Stereo visual for quad buffered stereo.
    */
-  GHOST_WindowUIKit(GHOST_SystemUIKit *systemUIKit,
+  GHOST_WindowUIKit(UIWindowScene *ui_windowscene,
+                    UIWindow *ui_window,
+                    GHOST_SystemUIKit *systemUIKit,
                     const char *title,
                     GHOST_TWindowState state,
                     GHOST_TDrawingContextType type = GHOST_kDrawingContextTypeNone,
                     const bool stereoVisual = false,
                     bool is_debug = false,
-                    bool dialog = false);
+                    bool is_dialog = false);
 
   /**
    * Destructor.
@@ -313,7 +314,6 @@ class GHOST_WindowUIKit : public GHOST_Window {
   GHOSTOpenGLUIViewController *m_openGLViewController;
   GHOSTMetalUIView *m_metalView;
   GHOSTMetalUIViewController *m_metalViewController;
-  CAMetalLayer *m_metalLayer;
 
   /** The mother SystemUIKit class to send events */
   GHOST_SystemUIKit *m_systemUIKit;

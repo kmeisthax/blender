@@ -17,6 +17,8 @@
  * All rights reserved.
  */
 
+#include <GLKit/GLKit.h>
+#include <MetalKit/MetalKit.h>
 #include "GHOST_WindowUIKit.h"
 #include "GHOST_ContextNone.h"
 #include "GHOST_Debug.h"
@@ -29,7 +31,6 @@
 #endif
 
 #include <UIKit/UIKit.h>
-#include <GLKit/GLKit.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
@@ -60,6 +61,8 @@
 @implementation GHOSTWindowSceneDelegate : NSObject
 - (id)init {
     systemUIKit = (GHOST_SystemUIKit *)[[[UIApplication sharedApplication] delegate] systemUIKit];
+
+    return self;
 }
 
 - (void)setSystemAndWindowUIKit:(GHOST_SystemUIKit *)sysUIKit
@@ -108,22 +111,22 @@
 #undef UI_VIEW_BASE_CLASS
 
 #define UI_VIEW_CLASS GHOSTMetalUIView
-#define UI_VIEW_BASE_CLASS UIView
+#define UI_VIEW_BASE_CLASS MTKView
 #include "GHOST_WindowViewUIKit.h"
 #undef UI_VIEW_CLASS
 #undef UI_VIEW_BASE_CLASS
 
-#define UI_VIEW_CLASS GHOSTOpenGLUIViewController
-#define UI_VIEW_BASE_CLASS GLKViewController
+#define UI_VIEW_CONTROLLER_CLASS GHOSTOpenGLUIViewController
+#define UI_VIEW_CONTROLLER_BASE_CLASS GLKViewController
 #include "GHOST_WindowViewControllerUIKit.h"
-#undef UI_VIEW_CLASS
-#undef UI_VIEW_BASE_CLASS
+#undef UI_VIEW_CONTROLLER_CLASS
+#undef UI_VIEW_CONTROLLER_BASE_CLASS
 
-#define UI_VIEW_CLASS GHOSTMetalUIViewController
-#define UI_VIEW_BASE_CLASS UIViewController
+#define UI_VIEW_CONTROLLER_CLASS GHOSTMetalUIViewController
+#define UI_VIEW_CONTROLLER_BASE_CLASS UIViewController
 #include "GHOST_WindowViewControllerUIKit.h"
-#undef UI_VIEW_CLASS
-#undef UI_VIEW_BASE_CLASS
+#undef UI_VIEW_CONTROLLER_CLASS
+#undef UI_VIEW_CONTROLLER_BASE_CLASS
 
 #pragma mark initialization / finalization
 
@@ -141,9 +144,7 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindowScene *ui_windowscene,
       m_window(ui_window),
       m_openGLView(nil),
       m_metalView(nil),
-      m_metalLayer(nil),
       m_systemUIKit(systemUIKit),
-      m_customCursor(0),
       m_immediateDraw(false),
       m_debug_context(is_debug),
       m_is_dialog(is_dialog)
@@ -161,31 +162,20 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindowScene *ui_windowscene,
   UIViewController *controller;
 
   if (metalDevice) {
-    // Create metal layer and view if supported
-    m_metalLayer = [[CAMetalLayer alloc] init];
-    [m_metalLayer setEdgeAntialiasingMask:0];
-    [m_metalLayer setMasksToBounds:NO];
-    [m_metalLayer setOpaque:YES];
-    [m_metalLayer setFramebufferOnly:YES];
-    [m_metalLayer setPresentsWithTransaction:NO];
-    [m_metalLayer removeAllAnimations];
-    [m_metalLayer setDevice:metalDevice];
-
-    m_metalView = [[GHOSTMetalUIView alloc] initWithFrame:rect];
-    [m_metalView setLayer:m_metalLayer];
+    m_metalView = [[GHOSTMetalUIView alloc] initWithFrame:[m_window bounds] device:metalDevice];
     [m_metalView setSystemAndWindowUIKit:systemUIKit windowUIKit:this];
     view = m_metalView;
 
     m_metalViewController = [[GHOSTMetalUIViewController alloc] initWithView:m_metalView];
-    controller = m_metalViewController;
+    controller = (UIViewController *)m_metalViewController;
   }
   else {
     // Fallback to OpenGL view if there is no Metal support
-    m_openGLView = [[GHOSTOpenGLUIView alloc] initWithFrame:rect];
+    m_openGLView = [[GHOSTOpenGLUIView alloc] initWithFrame:[m_window bounds]];
     [m_openGLView setSystemAndWindowUIKit:systemUIKit windowUIKit:this];
     view = m_openGLView;
 
-    m_openGLViewController = [[GHOSTOpenGLViewController alloc] initWithView:m_openGLView];
+    m_openGLViewController = [[GHOSTOpenGLUIViewController alloc] initWithView:m_openGLView];
     controller = m_openGLViewController;
   }
 
@@ -199,7 +189,7 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindowScene *ui_windowscene,
 
   m_tablet = GHOST_TABLET_DATA_NONE;
 
-  GHOSTWindowSceneDelegate *windowDelegate = [m_windowscene delegate];
+  GHOSTWindowSceneDelegate *windowDelegate = (GHOSTWindowSceneDelegate *)[m_windowScene delegate];
   [windowDelegate setSystemAndWindowUIKit:systemUIKit windowUIKit:this];
 
   if (state == GHOST_kWindowStateFullScreen)
@@ -213,11 +203,6 @@ GHOST_WindowUIKit::GHOST_WindowUIKit(UIWindowScene *ui_windowscene,
 GHOST_WindowUIKit::~GHOST_WindowUIKit()
 {
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  if (m_customCursor) {
-    [m_customCursor release];
-    m_customCursor = nil;
-  }
 
   releaseNativeHandles();
 
@@ -237,13 +222,13 @@ GHOST_WindowUIKit::~GHOST_WindowUIKit()
     [m_metalViewController release];
     m_metalViewController = nil;
   }
-  if (m_metalLayer) {
-    [m_metalLayer release];
-    m_metalLayer = nil;
-  }
 
-  if (m_window) {
-    [m_window close];
+  if (m_windowScene) {
+    UIWindowSceneDestructionRequestOptions* dro = [[UIWindowSceneDestructionRequestOptions alloc] init];
+    [dro setWindowDismissalAnimation: UIWindowSceneDismissalAnimationStandard];
+    [[UIApplication sharedApplication] requestSceneSessionDestruction:[m_windowScene session]
+      options:dro
+      errorHandler:nil];
   }
 
   [pool drain];
@@ -253,7 +238,7 @@ GHOST_WindowUIKit::~GHOST_WindowUIKit()
 
 bool GHOST_WindowUIKit::getValid() const
 {
-  NSView *view = (m_openGLView) ? m_openGLView : m_metalView;
+  UIView *view = (m_openGLView) ? m_openGLView : m_metalView;
   return GHOST_Window::getValid() && m_window != NULL && view != NULL;
 }
 
@@ -315,7 +300,7 @@ std::string GHOST_WindowUIKit::getTitle() const
 
 void GHOST_WindowUIKit::getWindowBounds(GHOST_Rect &bounds) const
 {
-  NSRect rect;
+  CGRect rect;
   GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::getWindowBounds(): window invalid");
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -332,7 +317,7 @@ void GHOST_WindowUIKit::getWindowBounds(GHOST_Rect &bounds) const
 
 void GHOST_WindowUIKit::getClientBounds(GHOST_Rect &bounds) const
 {
-  NSRect rect;
+  CGRect rect;
   GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::getClientBounds(): window invalid");
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -405,8 +390,8 @@ void GHOST_WindowUIKit::screenToClientIntern(GHOST_TInt32 inX,
                                              GHOST_TInt32 &outX,
                                              GHOST_TInt32 &outY) const
 {
-  NSRect screenCoord;
-  NSRect baseCoord;
+  CGRect screenCoord;
+  CGRect baseCoord;
 
   screenCoord.origin.x = inX;
   screenCoord.origin.y = inY;
@@ -423,8 +408,8 @@ void GHOST_WindowUIKit::clientToScreenIntern(GHOST_TInt32 inX,
                                              GHOST_TInt32 &outX,
                                              GHOST_TInt32 &outY) const
 {
-  NSRect screenCoord;
-  NSRect baseCoord;
+  CGRect screenCoord;
+  CGRect baseCoord;
 
   baseCoord.origin.x = inX;
   baseCoord.origin.y = inY;
@@ -477,9 +462,9 @@ GHOST_TSuccess GHOST_WindowUIKit::setOrder(GHOST_TWindowOrder order)
 GHOST_Context *GHOST_WindowUIKit::newDrawingContext(GHOST_TDrawingContextType type)
 {
   if (type == GHOST_kDrawingContextTypeOpenGL) {
-
+    CAMetalLayer* metalLayer = (CAMetalLayer *)[m_metalView layer];
     GHOST_Context *context = new GHOST_ContextEAGL(
-        m_wantStereoVisual, m_metalView, m_metalLayer, m_openGLView);
+        m_wantStereoVisual, (UIView *)m_metalView, metalLayer, m_openGLView);
 
     if (context->initializeDrawingContext())
       return context;
@@ -496,8 +481,8 @@ GHOST_TSuccess GHOST_WindowUIKit::invalidate()
 {
   GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::invalidate(): window invalid");
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  NSView *view = (m_openGLView) ? m_openGLView : m_metalView;
-  [view setNeedsDisplay:YES];
+  UIView *view = (m_openGLView) ? m_openGLView : m_metalView;
+  [view setNeedsDisplay];
   [pool drain];
   return GHOST_kSuccess;
 }
