@@ -64,8 +64,8 @@ GHOST_TSuccess GHOST_DisplayManagerUIKit::getDisplaySetting(GHOST_TUns8 display,
 
   //TODO: Does Blender want rotated or unrotated screen size?
   CGRect frame = [askedDisplay nativeBounds];
-  setting.xPixels = frame.width;
-  setting.yPixels = frame.height;
+  setting.xPixels = frame.size.width;
+  setting.yPixels = frame.size.height;
 
   setting.bpp = 24; //UIKit does not appear to provide a way to get this
 
@@ -103,8 +103,8 @@ GHOST_TSuccess GHOST_DisplayManagerUIKit::getCurrentDisplaySetting(
 
   //TODO: Does Blender want rotated or unrotated screen size?
   CGRect frame = [askedDisplay nativeBounds];
-  setting.xPixels = frame.width;
-  setting.yPixels = frame.height;
+  setting.xPixels = frame.size.width;
+  setting.yPixels = frame.size.height;
 
   setting.bpp = 24; //UIKit does not appear to provide a way to get this
 

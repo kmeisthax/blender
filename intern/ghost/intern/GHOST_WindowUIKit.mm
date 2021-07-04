@@ -29,6 +29,7 @@
 #endif
 
 #include <UIKit/UIKit.h>
+#include <GLKit/GLKit.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
@@ -44,7 +45,7 @@
 
 - (id)init;
 
-- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSesssion *)session
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session
                     options:(UISceneConnectionOptions *)connectionOptions;
 - (void)windowScene:(UIWindowScene *) windowScene
     didUpdateCoordinateSpace:(id<UICoordinateSpace>) previousCoordinateSpace
@@ -58,7 +59,7 @@
 
 @implementation GHOSTWindowSceneDelegate : NSObject
 - (id)init {
-    systemUIKit = [[[UIApplication sharedApplication] delegate] systemUIKit];
+    systemUIKit = (GHOST_SystemUIKit *)[[[UIApplication sharedApplication] delegate] systemUIKit];
 }
 
 - (void)setSystemAndWindowUIKit:(GHOST_SystemUIKit *)sysUIKit
@@ -68,7 +69,7 @@
   associatedWindow = winUIKit;
 }
 
-- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSesssion *)session
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session
                     options:(UISceneConnectionOptions *)connectionOptions {
     UIWindow* window = [[scene windows] firstObject];
 }
@@ -319,14 +320,12 @@ void GHOST_WindowUIKit::getWindowBounds(GHOST_Rect &bounds) const
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-  NSRect screenSize = [[m_window screen] visibleFrame];
+  rect = [m_window bounds];
 
-  rect = [m_window frame];
-
-  bounds.m_b = screenSize.size.height - (rect.origin.y - screenSize.origin.y);
-  bounds.m_l = rect.origin.x - screenSize.origin.x;
-  bounds.m_r = rect.origin.x - screenSize.origin.x + rect.size.width;
-  bounds.m_t = screenSize.size.height - (rect.origin.y + rect.size.height - screenSize.origin.y);
+  bounds.m_b = rect.origin.y;
+  bounds.m_l = rect.origin.x;
+  bounds.m_r = rect.origin.x + rect.size.width;
+  bounds.m_t = rect.origin.y + rect.size.height;
 
   [pool drain];
 }
@@ -338,103 +337,37 @@ void GHOST_WindowUIKit::getClientBounds(GHOST_Rect &bounds) const
 
   NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-  NSRect screenSize = [[m_window screen] visibleFrame];
+  rect = [m_window bounds];
 
-  // Max window contents as screen size (excluding title bar...)
-  NSRect contentRect = [CocoaWindow contentRectForFrameRect:screenSize
-                                                  styleMask:[m_window styleMask]];
-
-  rect = [m_window contentRectForFrameRect:[m_window frame]];
-
-  bounds.m_b = contentRect.size.height - (rect.origin.y - contentRect.origin.y);
-  bounds.m_l = rect.origin.x - contentRect.origin.x;
-  bounds.m_r = rect.origin.x - contentRect.origin.x + rect.size.width;
-  bounds.m_t = contentRect.size.height - (rect.origin.y + rect.size.height - contentRect.origin.y);
+  bounds.m_b = rect.origin.y;
+  bounds.m_l = rect.origin.x;
+  bounds.m_r = rect.origin.x + rect.size.width;
+  bounds.m_t = rect.origin.y + rect.size.height;
   [pool drain];
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setClientWidth(GHOST_TUns32 width)
 {
-  GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::setClientWidth(): window invalid");
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  GHOST_Rect cBnds, wBnds;
-  getClientBounds(cBnds);
-  if (((GHOST_TUns32)cBnds.getWidth()) != width) {
-    NSSize size;
-    size.width = width;
-    size.height = cBnds.getHeight();
-    [m_window setContentSize:size];
-  }
-  [pool drain];
+  //iPadOS windows cannot be resized by the application
   return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setClientHeight(GHOST_TUns32 height)
 {
-  GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::setClientHeight(): window invalid");
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  GHOST_Rect cBnds, wBnds;
-  getClientBounds(cBnds);
-  if (((GHOST_TUns32)cBnds.getHeight()) != height) {
-    NSSize size;
-    size.width = cBnds.getWidth();
-    size.height = height;
-    [m_window setContentSize:size];
-  }
-  [pool drain];
+  //iPadOS windows cannot be resized by the application
   return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setClientSize(GHOST_TUns32 width, GHOST_TUns32 height)
 {
-  GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::setClientSize(): window invalid");
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  GHOST_Rect cBnds, wBnds;
-  getClientBounds(cBnds);
-  if ((((GHOST_TUns32)cBnds.getWidth()) != width) ||
-      (((GHOST_TUns32)cBnds.getHeight()) != height)) {
-    NSSize size;
-    size.width = width;
-    size.height = height;
-    [m_window setContentSize:size];
-  }
-  [pool drain];
+  //iPadOS windows cannot be resized by the application
   return GHOST_kSuccess;
 }
 
 GHOST_TWindowState GHOST_WindowUIKit::getState() const
 {
-  GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::getState(): window invalid");
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  GHOST_TWindowState state;
-
-  NSUInteger masks = [m_window styleMask];
-
-  if (masks & NSWindowStyleMaskFullScreen) {
-    // Lion style fullscreen
-    if (!m_immediateDraw) {
-      state = GHOST_kWindowStateFullScreen;
-    }
-    else {
-      state = GHOST_kWindowStateNormal;
-    }
-  }
-  else if ([m_window isMiniaturized]) {
-    state = GHOST_kWindowStateMinimized;
-  }
-  else if ([m_window isZoomed]) {
-    state = GHOST_kWindowStateMaximized;
-  }
-  else {
-    if (m_immediateDraw) {
-      state = GHOST_kWindowStateFullScreen;
-    }
-    else {
-      state = GHOST_kWindowStateNormal;
-    }
-  }
-  [pool drain];
-  return state;
+  //iPadOS windows are always fullscreen or divided
+  return GHOST_kWindowStateFullScreen;
 }
 
 void GHOST_WindowUIKit::screenToClient(GHOST_TInt32 inX,
@@ -478,7 +411,8 @@ void GHOST_WindowUIKit::screenToClientIntern(GHOST_TInt32 inX,
   screenCoord.origin.x = inX;
   screenCoord.origin.y = inY;
 
-  baseCoord = [m_window convertRectFromScreen:screenCoord];
+  UIView *view = (m_openGLView) ? m_openGLView : m_metalView;
+  screenCoord = [view convertRect:baseCoord fromCoordinateSpace:view.window.screen.coordinateSpace];
 
   outX = baseCoord.origin.x;
   outY = baseCoord.origin.y;
@@ -495,7 +429,8 @@ void GHOST_WindowUIKit::clientToScreenIntern(GHOST_TInt32 inX,
   baseCoord.origin.x = inX;
   baseCoord.origin.y = inY;
 
-  screenCoord = [m_window convertRectToScreen:baseCoord];
+  UIView *view = (m_openGLView) ? m_openGLView : m_metalView;
+  screenCoord = [view convertRect:baseCoord toCoordinateSpace:view.window.screen.coordinateSpace];
 
   outX = screenCoord.origin.x;
   outY = screenCoord.origin.y;
@@ -506,16 +441,10 @@ UIScreen *GHOST_WindowUIKit::getScreen()
   return [[m_window windowScene] screen];
 }
 
-/* called for event, when window leaves monitor to another */
 void GHOST_WindowUIKit::setNativePixelSize(void)
 {
-  NSView *view = (m_openGLView) ? m_openGLView : m_metalView;
-  NSRect backingBounds = [view convertRectToBacking:[view bounds]];
-
-  GHOST_Rect rect;
-  getClientBounds(rect);
-
-  m_nativePixelSize = (float)backingBounds.size.width / (float)rect.getWidth();
+  UIView *view = (m_openGLView) ? m_openGLView : m_metalView;
+  m_nativePixelSize = [view contentScaleFactor];
 }
 
 /**
@@ -527,75 +456,19 @@ void GHOST_WindowUIKit::setNativePixelSize(void)
  */
 GHOST_TSuccess GHOST_WindowUIKit::setState(GHOST_TWindowState state)
 {
-  GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::setState(): window invalid");
-  switch (state) {
-    case GHOST_kWindowStateMinimized:
-      [m_window miniaturize:nil];
-      break;
-    case GHOST_kWindowStateMaximized:
-      [m_window zoom:nil];
-      break;
-
-    case GHOST_kWindowStateFullScreen: {
-      NSUInteger masks = [m_window styleMask];
-
-      if (!(masks & NSWindowStyleMaskFullScreen)) {
-        [m_window toggleFullScreen:nil];
-      }
-      break;
-    }
-    case GHOST_kWindowStateNormal:
-    default:
-      NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-      NSUInteger masks = [m_window styleMask];
-
-      if (masks & NSWindowStyleMaskFullScreen) {
-        // Lion style fullscreen
-        [m_window toggleFullScreen:nil];
-      }
-      else if ([m_window isMiniaturized])
-        [m_window deminiaturize:nil];
-      else if ([m_window isZoomed])
-        [m_window zoom:nil];
-      [pool drain];
-      break;
-  }
-
+  //iPadOS does not support application-driven window scene reordering
   return GHOST_kSuccess;
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setModifiedState(bool isUnsavedChanges)
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  [m_window setDocumentEdited:isUnsavedChanges];
-
-  [pool drain];
+  //iPadOS does not have a notion of "modified state" for windows
   return GHOST_Window::setModifiedState(isUnsavedChanges);
 }
 
 GHOST_TSuccess GHOST_WindowUIKit::setOrder(GHOST_TWindowOrder order)
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-  GHOST_ASSERT(getValid(), "GHOST_WindowUIKit::setOrder(): window invalid");
-  if (order == GHOST_kWindowOrderTop) {
-    [NSApp activateIgnoringOtherApps:YES];
-    [m_window makeKeyAndOrderFront:nil];
-  }
-  else {
-    NSArray *windowsList;
-
-    [m_window orderBack:nil];
-
-    // Check for other blender opened windows and make the frontmost key
-    windowsList = [NSApp orderedWindows];
-    if ([windowsList count]) {
-      [[windowsList objectAtIndex:0] makeKeyAndOrderFront:nil];
-    }
-  }
-
-  [pool drain];
+  //iPadOS does not support application-driven window scene reordering
   return GHOST_kSuccess;
 }
 
