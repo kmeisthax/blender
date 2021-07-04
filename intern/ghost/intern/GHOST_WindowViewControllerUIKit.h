@@ -30,15 +30,17 @@
   GHOST_WindowUIKit *associatedWindow;
 }
 
-- (void)initWithView:(UIView*)view;
+- (UIViewController *)initWithView:(UIView*)view;
 - (void)setSystemAndWindowUIKit:(GHOST_SystemUIKit *)sysUIKit
                     windowUIKit:(GHOST_WindowUIKit *)winUIKit;
 @end
 
 @implementation UI_VIEW_CONTROLLER_CLASS
 
-- (void)initWithView:(UIView*)view {
+- (UIViewController *)initWithView:(UIView*)view {
     [self setView:view];
+
+    return self;
 }
 
 - (void)setSystemAndWindowUIKit:(GHOST_SystemUIKit *)sysUIKit
@@ -46,11 +48,6 @@
 {
   systemUIKit = sysUIKit;
   associatedWindow = winUIKit;
-
-  composing = false;
-  composing_text = nil;
-
-  immediate_draw = false;
 }
 
 //TODO: basically all input handling

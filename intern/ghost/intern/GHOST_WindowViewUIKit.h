@@ -29,11 +29,6 @@
 {
   GHOST_SystemUIKit *systemUIKit;
   GHOST_WindowUIKit *associatedWindow;
-
-  bool composing;
-  NSString *composing_text;
-
-  bool immediate_draw;
 }
 - (void)setSystemAndWindowUIKit:(GHOST_SystemUIKit *)sysUIKit
                     windowUIKit:(GHOST_WindowUIKit *)winUIKit;
@@ -46,11 +41,6 @@
 {
   systemUIKit = sysUIKit;
   associatedWindow = winUIKit;
-
-  composing = false;
-  composing_text = nil;
-
-  immediate_draw = false;
 }
 
 - (BOOL)isOpaque
@@ -58,7 +48,7 @@
   return YES;
 }
 
-- (void)drawRect:(NSRect)rect
+- (void)drawRect:(CGRect)rect
 {
   [super drawRect:rect];
   systemUIKit->handleWindowEvent(GHOST_kEventWindowUpdate, associatedWindow);

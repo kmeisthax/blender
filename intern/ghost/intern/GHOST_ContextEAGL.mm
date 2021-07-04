@@ -23,6 +23,7 @@
  * Definition of GHOST_ContextEAGL class.
  */
 
+#import <OpenGLES/ES2/gl.h>
 #include "GHOST_ContextEAGL.h"
 
 #include <CoreGraphics/CGGeometry.h>
@@ -250,10 +251,7 @@ GHOST_TSuccess GHOST_ContextEAGL::initializeDrawingContext()
   [EAGLContext setCurrentContext:m_openGLContext];
 
   if (m_debug) {
-    GLint major = 0, minor = 0;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
-    fprintf(stderr, "OpenGL version %d.%d\n", major, minor);
+    fprintf(stderr, "OpenGL ES version (something?)\n"); //TODO: Cannot get GLES version on iPadOS
     fprintf(stderr, "Renderer: %s\n", glGetString(GL_RENDERER));
   }
 
@@ -407,7 +405,7 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
   assert(m_defaultFramebuffer != 0);
 
   CGRect bounds = [m_metalView bounds];
-  CGSize backingSize = [m_metalView convertSizeToBacking:bounds.size];
+  CGSize backingSize = bounds.size; //TODO: Backing size?
   size_t width = (size_t)backingSize.width;
   size_t height = (size_t)backingSize.height;
 
@@ -499,7 +497,7 @@ void GHOST_ContextEAGL::metalUpdateFramebuffer()
   m_defaultFramebufferMetalTexture = [tex retain];
 
   glBindFramebuffer(GL_FRAMEBUFFER, m_defaultFramebuffer);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, glTex, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glTex, 0);
 
   [m_metalLayer setDrawableSize:CGSizeMake((CGFloat)width, (CGFloat)height)];
 
