@@ -121,9 +121,16 @@ else()
       COMMAND xcode-select --print-path
       OUTPUT_VARIABLE XCODE_DEV_PATH OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    execute_process(
-      COMMAND xcodebuild -version -sdk macosx SDKVersion
-      OUTPUT_VARIABLE MACOSX_SDK_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+      execute_process(
+        COMMAND xcodebuild -version -sdk iphoneos SDKVersion
+        OUTPUT_VARIABLE MACOSX_SDK_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+    else()
+      execute_process(
+        COMMAND xcodebuild -version -sdk macosx SDKVersion
+        OUTPUT_VARIABLE MACOSX_SDK_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
 
     if(NOT CMAKE_OSX_ARCHITECTURES)
       if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
@@ -156,7 +163,13 @@ else()
       set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
       set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
       set(PLATFORM_LDFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
-      set(PLATFORM_BUILD_TARGET --build=aarch64-apple-ios14.5.0) # iPadOS 14.5
+      set(PLATFORM_BUILD_TARGET --build=aarch64-apple-darwin17.5.0 --host=aarch64) # iPadOS 14.5?!
+      set(PLATFORM_CMAKE_FLAGS
+        -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
+        -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${OSX_DEPLOYMENT_TARGET}
+        -DCMAKE_OSX_SYSROOT:PATH=${OSX_SYSROOT}
+        -DCMAKE_SYSTEM_NAME=iOS
+      )
     else()
       set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
       set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -mmacosx-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
@@ -166,12 +179,12 @@ else()
       else()
         set(PLATFORM_BUILD_TARGET --build=aarch64-apple-darwin20.0.0) # macOS 11.00
       endif()
+      set(PLATFORM_CMAKE_FLAGS
+        -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
+        -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${OSX_DEPLOYMENT_TARGET}
+        -DCMAKE_OSX_SYSROOT:PATH=${OSX_SYSROOT}
+      )
     endif()
-    set(PLATFORM_CMAKE_FLAGS
-      -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
-      -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${OSX_DEPLOYMENT_TARGET}
-      -DCMAKE_OSX_SYSROOT:PATH=${OSX_SYSROOT}
-    )
   else()
     if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "aarch64")
       set(BLENDER_PLATFORM_ARM ON)
