@@ -22,6 +22,10 @@ else()
   set(TBB_STATIC_LIBRARY On)
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(TBB_EXTRA_ARGS -DTBB_BUILD_TESTS=OFF)
+endif()
+
 # CMake script for TBB from https://github.com/wjakob/tbb/blob/master/CMakeLists.txt
 ExternalProject_Add(external_tbb
   URL file://${PACKAGE_DIR}/${TBB_FILE}
