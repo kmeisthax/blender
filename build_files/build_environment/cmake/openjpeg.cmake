@@ -11,6 +11,11 @@ else()
   set(OPENJPEG_EXTRA_ARGS ${DEFAULT_CMAKE_FLAGS})
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  #Don't build the codec executables on iOS as they try to link with macOS libs
+  set(OPENJPEG_EXTRA_ARGS ${OPENJPEG_CMAKE_FLAGS} -DBUILD_CODEC=off)
+endif()
+
 ExternalProject_Add(external_openjpeg
   URL file://${PACKAGE_DIR}/${OPENJPEG_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
