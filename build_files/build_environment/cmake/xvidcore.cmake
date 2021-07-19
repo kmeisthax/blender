@@ -4,6 +4,10 @@ if(WIN32)
   set(XVIDCORE_EXTRA_ARGS --host=${MINGW_HOST})
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(XVIDCORE_EXTRA_ARGS --host=aarch64 --target=aarch64-apple-darwin17.0.0)
+endif()
+
 ExternalProject_Add(external_xvidcore
   URL file://${PACKAGE_DIR}/${XVIDCORE_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
