@@ -10,6 +10,11 @@ if(BLENDER_PLATFORM_ARM)
   set(PNG_EXTRA_ARGS ${PNG_EXTRA_ARGS} -DPNG_HARDWARE_OPTIMIZATIONS=ON -DPNG_ARM_NEON=on -DCMAKE_SYSTEM_PROCESSOR="aarch64")
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  #disable building pngfix on iPadOS
+  set(PNG_EXTRA_ARGS ${PNG_EXTRA_ARGS} -DPNG_SHARED=off)
+endif()
+
 ExternalProject_Add(external_png
   URL file://${PACKAGE_DIR}/${PNG_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
