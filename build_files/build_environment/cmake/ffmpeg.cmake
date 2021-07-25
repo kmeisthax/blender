@@ -59,6 +59,16 @@ elseif(UNIX)
   )
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(FFMPEG_EXTRA_FLAGS
+    ${FFMPEG_EXTRA_FLAGS}
+    --enable-cross-compile
+    --arch=arm64
+    --target-os=darwin
+    --disable-asm
+  )
+endif()
+
 ExternalProject_Add(external_ffmpeg
   URL file://${PACKAGE_DIR}/${FFMPEG_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
