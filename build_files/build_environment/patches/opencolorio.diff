@@ -14,3 +14,35 @@ index 7b894a45..92618215 100644
          )
          if(CMAKE_TOOLCHAIN_FILE)
              set(pystring_CMAKE_ARGS
+
+diff --git a/src/OpenColorIO/SystemMonitor.cpp b/src/OpenColorIO/SystemMonitor.cpp
+index 329f8673..0e178e50 100644
+--- a/src/OpenColorIO/SystemMonitor.cpp
++++ b/src/OpenColorIO/SystemMonitor.cpp
+@@ -28,1 +28,1 @@
+-#elif __APPLE__
++#elif __APPLE__ && !__IOS__
+
+diff --git a/src/OpenColorIO/CMakeLists.txt b/src/OpenColorIO/CMakeLists.txt
+index 7f5b1f29..27b98b4c 100644
+--- a/src/OpenColorIO/CMakeLists.txt 
++++ b/src/OpenColorIO/CMakeLists.txt 
+@@ -234,5 +227,13 @@ if (APPLE)
++	if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
++		target_compile_definitions(OpenColorIO PRIVATE __IOS__)
++		target_link_libraries(OpenColorIO
++			PRIVATE
++				"-framework IOKit"
++		)
++	else()
+-	target_link_libraries(OpenColorIO
+-		PRIVATE
+-			"-framework Carbon"
+-			"-framework IOKit"
+-	)
++		target_link_libraries(OpenColorIO
++			PRIVATE
++				"-framework Carbon"
++				"-framework IOKit"
++		)
++	endif()
