@@ -163,7 +163,8 @@ else()
       set(PLATFORM_CFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
       set(PLATFORM_CXXFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -std=c++11 -stdlib=libc++ -arch ${CMAKE_OSX_ARCHITECTURES}")
       set(PLATFORM_LDFLAGS "-isysroot ${OSX_SYSROOT} -miphoneos-version-min=${OSX_DEPLOYMENT_TARGET} -arch ${CMAKE_OSX_ARCHITECTURES}")
-      set(PLATFORM_BUILD_TARGET --build=aarch64-apple-darwin17.5.0 --host=aarch64) # iPadOS 14.5?!
+      set(PLATFORM_BUILD_TARGET --build=x86_64-apple-darwin17.0.0 --host=aarch64-apple-darwin17.0.0) # iPadOS 14.5?!
+      set(BLENDER_PLATFORM_ARM ON)
       set(PLATFORM_CMAKE_FLAGS
         -DCMAKE_OSX_ARCHITECTURES:STRING=${CMAKE_OSX_ARCHITECTURES}
         -DCMAKE_OSX_DEPLOYMENT_TARGET:STRING=${OSX_DEPLOYMENT_TARGET}
