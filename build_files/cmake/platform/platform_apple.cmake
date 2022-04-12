@@ -255,14 +255,6 @@ if(WITH_SDL)
 endif()
 
 set(PNG_ROOT ${LIBDIR}/png)
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
-  #libpng does not ship in the iOS SDK.
-  set(PNG_PNG_INCLUDE_DIR ${LIBDIR}/png/include)
-  set(PNG_LIBRARY ${LIBDIR}/png/lib/libpng.a ${ZLIB_LIBRARY})
-  set(PNG "${LIBDIR}/png")
-  set(PNG_INCLUDE_DIRS "${PNG}/include")
-  set(PNG_LIBPATH ${PNG}/lib) # not cmake defined
-endif()
 
 find_package(PNG REQUIRED)
 
