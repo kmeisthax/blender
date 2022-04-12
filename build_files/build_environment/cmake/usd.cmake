@@ -36,6 +36,13 @@ set(USD_EXTRA_ARGS
   -DPXR_MONOLITHIC_IMPORT=${BUILD_DIR}/usd/src/external_usd/cmake/defaults/Version.cmake
 )
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(USD_EXTRA_ARGS ${USD_EXTRA_ARGS}
+    -DBoost_INCLUDE_DIR=${LIBDIR}/boost/include
+    -DOPENGL_gl_LIBRARY=OpenGLES
+    -DOPENGL_INCLUDE_DIR="${OSX_SDK_ROOT}/System/Library/Frameworks/OpenGLES.framework/Headers")
+endif()
+
 ExternalProject_Add(external_usd
   URL file://${PACKAGE_DIR}/${USD_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
