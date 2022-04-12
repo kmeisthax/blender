@@ -16,7 +16,14 @@
 #
 # ***** END GPL LICENSE BLOCK *****
 
-set(GLFW_EXTRA_ARGS)
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(GLFW_EXTRA_ARGS
+    -DBUILD_SHARED_LIBS=ON
+    -DOPENGL_gl_LIBRARY=OpenGLES
+    -DOPENGL_INCLUDE_DIR=${OSX_SDK_ROOT}/System/Library/Frameworks/OpenGLES.framework/Headers)
+else()
+  set(GLFW_EXTRA_ARGS)
+endif()
 
 ExternalProject_Add(external_glfw
   URL file://${PACKAGE_DIR}/${GLFW_FILE}
