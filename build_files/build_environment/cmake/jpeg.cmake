@@ -32,12 +32,17 @@ else(WIN32)
     -DENABLE_STATIC=ON
     -DENABLE_SHARED=OFF
     -DCMAKE_INSTALL_LIBDIR=${LIBDIR}/jpg/lib)
+  
+  if(BLENDER_PLATFORM_ARM)
+    set(JPEG_EXTRA_ARGS ${JPEG_EXTRA_ARGS} -DCMAKE_SYSTEM_PROCESSOR="aarch64")
+  endif()
 
   ExternalProject_Add(external_jpeg
     URL file://${PACKAGE_DIR}/${JPEG_FILE}
     DOWNLOAD_DIR ${DOWNLOAD_DIR}
     URL_HASH ${JPEG_HASH_TYPE}=${JPEG_HASH}
     PREFIX ${BUILD_DIR}/jpg
+    PATCH_COMMAND ${PATCH_CMD} --verbose -p 0 -N -d ${BUILD_DIR}/jpg/src/external_jpeg < ${PATCH_DIR}/jpeg.diff
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBDIR}/jpg ${DEFAULT_CMAKE_FLAGS} ${JPEG_EXTRA_ARGS}
     INSTALL_DIR ${LIBDIR}/jpg
   )
