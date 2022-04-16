@@ -8,6 +8,7 @@ ExternalProject_Add(external_brotli
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
   URL_HASH ${BROTLI_HASH_TYPE}=${BROTLI_HASH}
   PREFIX ${BUILD_DIR}/brotli
+  PATCH_COMMAND ${PATCH_CMD} --verbose -p 0 -N -d ${BUILD_DIR}/brotli/src/external_brotli < ${PATCH_DIR}/brotli.diff
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBDIR}/brotli ${DEFAULT_CMAKE_FLAGS} ${BROTLI_EXTRA_ARGS}
   INSTALL_DIR ${LIBDIR}/brotli
 )
