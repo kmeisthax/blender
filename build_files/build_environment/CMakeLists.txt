@@ -103,7 +103,12 @@ else()
 endif()
 include(cmake/python_site_packages.cmake)
 include(cmake/package_python.cmake)
-include(cmake/usd.cmake)
+if(APPLE AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS"))
+  #USD contains PXR, which ships a debugger that requries ptrace.
+  #iOS apps cannot have debuggers.
+else()
+  include(cmake/usd.cmake)
+endif()
 include(cmake/potrace.cmake)
 include(cmake/haru.cmake)
 # Boost needs to be included after python.cmake due to the PYTHON_BINARY variable being needed.
