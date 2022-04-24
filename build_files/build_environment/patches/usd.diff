@@ -232,3 +232,27 @@ index 67ec0d15f..6dc3e85a0 100644
                      do { _fn(); } while (
                          !count.compare_exchange_strong(old, 0));
                  });
+diff -Naur a/cmake/defaults/Packages.cmake b/cmake/defaults/Packages.cmake
+--- a/cmake/defaults/Packages.cmake	2021-01-19 17:13:57.000000000 -0700
++++ b/cmake/defaults/Packages.cmake	2022-04-24 13:21:20.000000000 -0600
+@@ -123,12 +123,14 @@
+         endif()
+     endif()
+  
+-    # --Boost
+-    find_package(Boost
+-        COMPONENTS
+-            program_options
+-        REQUIRED
+-    )
++    if (NOT Boost_FOUND)
++        # --Boost
++        find_package(Boost
++            COMPONENTS
++                program_options
++            REQUIRED
++        )
++    endif()
+ endif()
+ 
+ # --TBB

@@ -39,6 +39,7 @@ set(USD_EXTRA_ARGS
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
   set(USD_EXTRA_ARGS ${USD_EXTRA_ARGS}
     -DBoost_INCLUDE_DIR=${LIBDIR}/boost/include
+    -DBoost_FOUND=ON
     -DOPENGL_gl_LIBRARY=OpenGLES
     -DOPENGL_INCLUDE_DIR="${OSX_SDK_ROOT}/System/Library/Frameworks/OpenGLES.framework/Headers")
 endif()
