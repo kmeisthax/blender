@@ -54,7 +54,12 @@ include(cmake/openexr.cmake)
 include(cmake/brotli.cmake)
 include(cmake/freetype.cmake)
 include(cmake/freeglut.cmake)
-include(cmake/glew.cmake)
+
+if(APPLE AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS"))
+  #GLEW does not support OpenGL ES contexts.
+else()
+  include(cmake/glew.cmake)
+endif()
 include(cmake/alembic.cmake)
 include(cmake/clew.cmake)
 include(cmake/cuew.cmake)
