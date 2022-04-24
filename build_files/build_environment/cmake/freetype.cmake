@@ -11,6 +11,12 @@ set(FREETYPE_EXTRA_ARGS
   -DPC_BROTLIDEC_LIBDIR=${LIBDIR}/brotli/lib
   )
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set (FREETYPE_EXTRA_ARGS ${FREETYPE_EXTRA_ARGS}
+    -DFT_DISABLE_BROTLI=ON #For some reason Freetype can't find Brotli on my machine
+  )
+endif()
+
 ExternalProject_Add(external_freetype
   URL file://${PACKAGE_DIR}/${FREETYPE_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
