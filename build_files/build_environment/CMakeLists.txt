@@ -116,15 +116,21 @@ else()
   include(cmake/openvdb.cmake)
 endif()
 include(cmake/nanovdb.cmake)
-include(cmake/python.cmake)
-option(USE_PIP_NUMPY "Install NumPy using pip wheel instead of building from source" OFF)
-if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64"))
-  set(USE_PIP_NUMPY ON)
+
+if(APPLE AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS"))
+  #Python's build system balks at cross-compilation
 else()
-  include(cmake/numpy.cmake)
+  include(cmake/python.cmake)
+  option(USE_PIP_NUMPY "Install NumPy using pip wheel instead of building from source" OFF)
+  if(APPLE AND ("${CMAKE_OSX_ARCHITECTURES}" STREQUAL "x86_64"))
+    set(USE_PIP_NUMPY ON)
+  else()
+    include(cmake/numpy.cmake)
+  endif()
+  include(cmake/python_site_packages.cmake)
+  include(cmake/package_python.cmake)
 endif()
-include(cmake/python_site_packages.cmake)
-include(cmake/package_python.cmake)
+
 if(APPLE AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS"))
   #USD contains PXR, which ships a debugger that requries ptrace.
   #iOS apps cannot have debuggers.
