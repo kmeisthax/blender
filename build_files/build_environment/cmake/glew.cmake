@@ -5,6 +5,12 @@ set(GLEW_EXTRA_ARGS
   -DBUILD_SHARED_LIBS=Off
 )
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS")
+  set(GLEW_EXTRA_ARGS ${GLEW_EXTRA_ARGS}
+    -DOPENGL_gl_LIBRARY=OpenGLES
+    -DOPENGL_INCLUDE_DIR=${OSX_SDK_ROOT}/System/Library/Frameworks/OpenGLES.framework/Headers)
+endif()
+
 ExternalProject_Add(external_glew
   URL file://${PACKAGE_DIR}/${GLEW_FILE}
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
