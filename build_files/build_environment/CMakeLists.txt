@@ -63,7 +63,11 @@ else()
 endif()
 
 include(cmake/sdl.cmake)
-include(cmake/opencollada.cmake)
+if(APPLE AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS"))
+  #OpenCOLLADA requires system() which is not available on iOS.
+else()
+  include(cmake/opencollada.cmake)
+endif()
 if(APPLE AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS"))
   #LLVM/Clang won't compile for iOS
 else()
